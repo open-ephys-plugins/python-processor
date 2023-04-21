@@ -74,6 +74,9 @@ public:
 		will be passed to downstream plugins. */
 	void updateSettings() override;
 
+	/** Allows the processor to load initialize the Python interpreter. */
+	void initialize(bool signalChainIsLoading) override;
+
 	/** Defines the functionality of the processor.
 		The process method is called every time a new data buffer is available.
 		Visualizer plugins typically use this method to send data to the canvas for display purposes */

@@ -59,10 +59,11 @@ endif()
 
 #Libraries and compiler options
 if(MSVC)
-	target_link_libraries(${PLUGIN_NAME} ${GUI_BIN_DIR}/open-ephys.lib)
+	target_link_libraries(${PLUGIN_NAME} PUBLIC ${GUI_BIN_DIR}/open-ephys.lib)
 	target_compile_options(${PLUGIN_NAME} PRIVATE /sdl- /W0)
 	
 	install(TARGETS ${PLUGIN_NAME} RUNTIME DESTINATION ${GUI_BIN_DIR}/plugins  CONFIGURATIONS ${CMAKE_CONFIGURATION_TYPES})
+	install(FILES $<TARGET_PDB_FILE:${PLUGIN_NAME}> DESTINATION  ${GUI_BIN_DIR}/plugins OPTIONAL)
 
 	set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../libs)
 elseif(LINUX)
@@ -92,4 +93,5 @@ foreach( src_file IN ITEMS ${SRC_FILES})
 endforeach()
 
 add_subdirectory(extern/pybind11)
-target_link_libraries(${PLUGIN_NAME} pybind11::embed pybind11::module pybind11::pybind11)
+target_link_libraries(${PLUGIN_NAME} PRIVATE pybind11::embed)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/extern/python-bin/ DESTINATION ${GUI_BIN_DIR}/shared  FILES_MATCHING PATTERN "*.dll")

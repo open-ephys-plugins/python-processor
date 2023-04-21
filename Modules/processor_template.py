@@ -1,14 +1,17 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 class PyProcessor:
     
     # A new processor is initialized whenever the plugin settings are updated
     def __init__(self, num_channels, sample_rate):
-        pass
+        print("Num channels", num_channels, " sample_rate: ", sample_rate)
     
     # Process each data buffer. Data is a numpy array.
     def process(self, data):
-        pass
+        x = np.arange(0, data[0].size, 1)
+        plt.plot(x, data[0])
+        plt.show()
         
     # Called at start of acquisition
     def start_acquisition(self):

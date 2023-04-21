@@ -30,13 +30,47 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace py = pybind11;
 
 
-py::scoped_interpreter guard{};
-py::gil_scoped_release release;
-
-
 PythonProcessor::PythonProcessor()
     : GenericProcessor("Python Processor")
 {
+    if(Py_IsInitialized() > 0)
+    {
+        LOGC("[***Before]Python Interpreter already initialized from: ", String(Py_GetPath()));
+
+    }
+    else
+    {
+
+        AlertWindow::showMessageBox (AlertWindow::InfoIcon,
+                                    "Select Python installation path",
+                                    "To use the plugin you need provide the path to your preferred Python installation. "
+                                    "Please select the path where your python dll is located in the next step.");
+                                    
+        FileChooser chooser ("Please select the path to your preferred Python installation",
+                            { File::getSpecialLocation(File::userHomeDirectory) });
+
+        if (chooser.browseForDirectory())
+        {
+            auto targetFolder = chooser.getResult();
+            if (targetFolder == File{})
+                return;
+            
+            Py_SetPythonHome(targetFolder.getFullPathName().toWideCharPointer());
+        }
+        
+        
+        py::initialize_interpreter();
+        {
+            py::gil_scoped_acquire acquire;
+
+            if(Py_IsInitialized() > 0)
+            {
+                LOGD("Python Interpreter initialized successfully from: ", String(Py_GetPythonHome()));
+                LOGC("Python interpreter build info: ", String(Py_GetBuildInfo()));
+            }
+        }
+    }
+    
     pyModule = NULL;
     pyObject = NULL;
     moduleReady = false;
@@ -49,10 +83,12 @@ PythonProcessor::PythonProcessor()
 
 PythonProcessor::~PythonProcessor()
 {
-    py::gil_scoped_acquire acquire;
-
-    delete pyModule;
-    delete pyObject;
+    {
+        delete pyModule;
+        delete pyObject;
+        py::gil_scoped_release release;
+    }
+    py::finalize_interpreter();
 }
 
 
@@ -79,7 +115,7 @@ void PythonProcessor::updateSettings()
 
     if (moduleReady)
     {
-        py::gil_scoped_acquire acquire;
+        // py::gil_scoped_acquire acquire;
         if (pyObject)
         {
             delete pyObject;
@@ -96,6 +132,11 @@ void PythonProcessor::updateSettings()
     }
 }
 
+void PythonProcessor::initialize(bool signalChainIsLoading)
+{
+    
+}
+
 void PythonProcessor::process(AudioBuffer<float>& buffer)
 {
     checkForEvents(true);
@@ -103,7 +144,6 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
 
     if (moduleReady)
     {
-        py::gil_scoped_acquire acquire;
 
         for (auto stream : getDataStreams())
         {
@@ -117,6 +157,7 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
                 const int numChannels = stream->getChannelCount();
 
                 // Only for blocks bigger than 0
+                // py::gil_scoped_acquire acquire;
                 if (numSamples > 0) 
                 {
                     py::array_t<float> numpyArray = py::array_t<float>({ numChannels, numSamples });
@@ -140,15 +181,16 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
                     }
 
 
-                    // Write from numpy array?
-                    for (int i = 0; i < numChannels; ++i) {
-                        int globalChannelIndex = getGlobalChannelIndex(stream->getStreamId(), i);
+                    // // Write from numpy array?
+                    // for (int i = 0; i < numChannels; ++i) {
+                    //     int globalChannelIndex = getGlobalChannelIndex(stream->getStreamId(), i);
 
-                        float* bufferChannelPtr = buffer.getWritePointer(globalChannelIndex);
-                        const float* numpyChannelPtr = numpyArray.data(i, 0);
-                        memcpy(bufferChannelPtr, numpyChannelPtr, sizeof(float) * numSamples);
-                    }
+                    //     float* bufferChannelPtr = buffer.getWritePointer(globalChannelIndex);
+                    //     const float* numpyChannelPtr = numpyArray.data(i, 0);
+                    //     memcpy(bufferChannelPtr, numpyChannelPtr, sizeof(float) * numSamples);
+                    // }
                 }
+                // py::gil_scoped_release release;
             
             }
         }
@@ -165,7 +207,7 @@ void PythonProcessor::handleTTLEvent(TTLEventPtr event)
     const uint16 streamId = event->getStreamId();
 
     // Give to python
-    py::gil_scoped_acquire acquire;
+    // py::gil_scoped_acquire acquire;
 
     try {
         pyObject->attr("handle_ttl_event")(state, sampleNumber, channel, line, streamId);
@@ -178,7 +220,7 @@ void PythonProcessor::handleTTLEvent(TTLEventPtr event)
 
 void PythonProcessor::handleSpike(SpikePtr event)
 {
-    py::gil_scoped_acquire acquire;
+    // py::gil_scoped_acquire acquire;
     try {
         pyObject->attr("handle_spike_event")();
     }
@@ -209,7 +251,7 @@ bool PythonProcessor::startAcquisition()
 {
     if (moduleReady)
     {
-        py::gil_scoped_acquire acquire;
+        // py::gil_scoped_acquire acquire;
 
         try {
             pyObject->attr("start_acquisition")();
@@ -225,7 +267,7 @@ bool PythonProcessor::startAcquisition()
 bool PythonProcessor::stopAcquisition() {
     if (moduleReady)
     {
-        py::gil_scoped_acquire acquire;
+        // py::gil_scoped_acquire acquire;
         try {
             pyObject->attr("stop_acquisition")();
         }
@@ -240,7 +282,7 @@ bool PythonProcessor::stopAcquisition() {
 void PythonProcessor::startRecording() {
     String recordingDirectory = CoreServices::getRecordingDirectoryName();
 
-    py::gil_scoped_acquire acquire;
+    // py::gil_scoped_acquire acquire;
     try {
         pyObject->attr("start_recording")(recordingDirectory.toRawUTF8());
     }
@@ -252,7 +294,7 @@ void PythonProcessor::startRecording() {
 
 
 void PythonProcessor::stopRecording() {
-    py::gil_scoped_acquire acquire;
+    // py::gil_scoped_acquire acquire;
     try {
         pyObject->attr("stop_recording")();
     }
@@ -286,8 +328,10 @@ bool PythonProcessor::importModule()
 
     try
     {
-        py::gil_scoped_acquire acquire;
+        LOGC("Acquiring scope...");
+        // py::gil_scoped_acquire acquire;
 
+        LOGC("Clearing previoud module info...");
         // Clear for new class
         if (pyModule)
         {
@@ -295,6 +339,7 @@ bool PythonProcessor::importModule()
             pyModule = NULL;
         }
 
+        LOGC("Getting module info...");
         // Get module info (change to get from editor)
         std::filesystem::path path(scriptPath.toRawUTF8());
         std::string moduleDir = path.parent_path().string();
@@ -302,6 +347,7 @@ bool PythonProcessor::importModule()
         moduleName = fileName.substr(0, fileName.find_last_of("."));
         
 
+        LOGC("Adding module to sys.path...");
         // Add module directory to sys.path
         py::module_ sys = py::module_::import("sys");
         py::object append = sys.attr("path").attr("append");
@@ -324,12 +370,15 @@ bool PythonProcessor::importModule()
         editorPtr->setPathLabelText("No Module Loaded");
         moduleReady = false;
         return false;
+    } catch (py::error_already_set &e)
+    {
+        handlePythonException(e);
     }
 }
 
 void PythonProcessor::reload() 
 {
-    py::gil_scoped_acquire acquire;
+    // py::gil_scoped_acquire acquire;
 
     if (pyModule)
     {
