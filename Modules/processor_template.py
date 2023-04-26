@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 class PyProcessor:
     
@@ -9,9 +8,10 @@ class PyProcessor:
     
     # Process each data buffer. Data is a numpy array.
     def process(self, data):
-        x = np.arange(0, data[0].size, 1)
-        plt.plot(x, data[0])
-        plt.show()
+        try:
+            print("Num Samples received: ", data[0].size)
+        except:
+            pass
         
     # Called at start of acquisition
     def start_acquisition(self):

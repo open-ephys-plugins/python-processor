@@ -92,6 +92,20 @@ foreach( src_file IN ITEMS ${SRC_FILES})
 	source_group("${group_name}" FILES "${src_file}")
 endforeach()
 
+# Find and link python and pybind11
+find_package(Python 3.6 REQUIRED COMPONENTS Interpreter Development)
 add_subdirectory(extern/pybind11)
 target_link_libraries(${PLUGIN_NAME} PRIVATE pybind11::embed)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/extern/python-bin/ DESTINATION ${GUI_BIN_DIR}/shared  FILES_MATCHING PATTERN "*.dll")
+
+message(STATUS "Python_RUNTIME_LIBRARY_DIRS: ${Python_RUNTIME_LIBRARY_DIRS}")
+message(STATUS "Python_INCLUDE_DIRS: ${Python_INCLUDE_DIRS}")
+message(STATUS "Python_LIBRARY_DIRS: ${Python_LIBRARY_DIRS}")
+
+if(MSVC)
+	file(GLOB _pythondll "${Python_RUNTIME_LIBRARY_DIRS}/python3[0-9]*.dll")
+
+	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+					${CMAKE_COMMAND} -E copy ${_pythondll} ${GUI_BIN_DIR}/shared)
+	
+	# install(FILES ${Python_RUNTIME_LIBRARY_DIRS}/python3[0-9]+.dll DESTINATION ${GUI_BIN_DIR}/shared)
+endif()

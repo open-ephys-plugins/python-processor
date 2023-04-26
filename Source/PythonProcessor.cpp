@@ -33,44 +33,6 @@ namespace py = pybind11;
 PythonProcessor::PythonProcessor()
     : GenericProcessor("Python Processor")
 {
-    if(Py_IsInitialized() > 0)
-    {
-        LOGC("[***Before]Python Interpreter already initialized from: ", String(Py_GetPath()));
-
-    }
-    else
-    {
-
-        AlertWindow::showMessageBox (AlertWindow::InfoIcon,
-                                    "Select Python installation path",
-                                    "To use the plugin you need provide the path to your preferred Python installation. "
-                                    "Please select the path where your python dll is located in the next step.");
-                                    
-        FileChooser chooser ("Please select the path to your preferred Python installation",
-                            { File::getSpecialLocation(File::userHomeDirectory) });
-
-        if (chooser.browseForDirectory())
-        {
-            auto targetFolder = chooser.getResult();
-            if (targetFolder == File{})
-                return;
-            
-            Py_SetPythonHome(targetFolder.getFullPathName().toWideCharPointer());
-        }
-        
-        
-        py::initialize_interpreter();
-        {
-            py::gil_scoped_acquire acquire;
-
-            if(Py_IsInitialized() > 0)
-            {
-                LOGD("Python Interpreter initialized successfully from: ", String(Py_GetPythonHome()));
-                LOGC("Python interpreter build info: ", String(Py_GetBuildInfo()));
-            }
-        }
-    }
-    
     pyModule = NULL;
     pyObject = NULL;
     moduleReady = false;
@@ -78,11 +40,13 @@ PythonProcessor::PythonProcessor()
     moduleName = "";
     editorPtr = NULL;
 
+    addStringParameter(Parameter::GLOBAL_SCOPE, "python_home", "Path to python home", String());
     addStringParameter(Parameter::GLOBAL_SCOPE, "script_path", "Path to python script", String());
 }
 
 PythonProcessor::~PythonProcessor()
 {
+    if(Py_IsInitialized() > 0)
     {
         delete pyModule;
         delete pyObject;
@@ -134,65 +98,62 @@ void PythonProcessor::updateSettings()
 
 void PythonProcessor::initialize(bool signalChainIsLoading)
 {
-    
+    if(!signalChainIsLoading
+       && Py_IsInitialized() == 0)
+    {
+        if( !initInterpreter() )
+            LOGE("Unable to initialize python interpreter!!");
+    }
 }
 
 void PythonProcessor::process(AudioBuffer<float>& buffer)
 {
+    if( !moduleReady )
+        return;
+
     checkForEvents(true);
 
-
-    if (moduleReady)
+    for (auto stream : getDataStreams())
     {
 
-        for (auto stream : getDataStreams())
+        if ((*stream)["enable_stream"])
         {
 
-            if ((*stream)["enable_stream"])
+            const uint16 streamId = stream->getStreamId();
+
+            const int numSamples = getNumSamplesInBlock(streamId);
+            const int numChannels = stream->getChannelCount();
+
+            // Only for blocks bigger than 0
+            // py::gil_scoped_acquire acquire;
+            if (numSamples > 0) 
             {
+                py::array_t<float> numpyArray = py::array_t<float>({ numChannels, numSamples });
 
-                const uint16 streamId = stream->getStreamId();
+                // Read into numpy array
+                for (int i = 0; i < numChannels; ++i) {
+                    int globalChannelIndex = getGlobalChannelIndex(stream->getStreamId(), i);
 
-                const int numSamples = getNumSamplesInBlock(streamId);
-                const int numChannels = stream->getChannelCount();
-
-                // Only for blocks bigger than 0
-                // py::gil_scoped_acquire acquire;
-                if (numSamples > 0) 
-                {
-                    py::array_t<float> numpyArray = py::array_t<float>({ numChannels, numSamples });
-
-                    // Read into numpy array
-                    for (int i = 0; i < numChannels; ++i) {
-                        int globalChannelIndex = getGlobalChannelIndex(stream->getStreamId(), i);
-
-                        const float* bufferChannelPtr = buffer.getReadPointer(globalChannelIndex);
-                        float* numpyChannelPtr = numpyArray.mutable_data(i, 0);
-                        memcpy(numpyChannelPtr, bufferChannelPtr, sizeof(float) * numSamples);
-                    }
-
-                    // Call python script on this block
-
-                    try {
-                        pyObject->attr("process")(numpyArray);
-                    }
-                    catch (py::error_already_set& e) {
-                        handlePythonException(e);
-                    }
-
-
-                    // // Write from numpy array?
-                    // for (int i = 0; i < numChannels; ++i) {
-                    //     int globalChannelIndex = getGlobalChannelIndex(stream->getStreamId(), i);
-
-                    //     float* bufferChannelPtr = buffer.getWritePointer(globalChannelIndex);
-                    //     const float* numpyChannelPtr = numpyArray.data(i, 0);
-                    //     memcpy(bufferChannelPtr, numpyChannelPtr, sizeof(float) * numSamples);
-                    // }
+                    const float* bufferChannelPtr = buffer.getReadPointer(globalChannelIndex);
+                    float* numpyChannelPtr = numpyArray.mutable_data(i, 0);
+                    memcpy(numpyChannelPtr, bufferChannelPtr, sizeof(float) * numSamples);
                 }
-                // py::gil_scoped_release release;
-            
+
+                // Call python script on this block
+                pyObject->attr("process")(numpyArray);
+
+
+                // // Write from numpy array?
+                // for (int i = 0; i < numChannels; ++i) {
+                //     int globalChannelIndex = getGlobalChannelIndex(stream->getStreamId(), i);
+
+                //     float* bufferChannelPtr = buffer.getWritePointer(globalChannelIndex);
+                //     const float* numpyChannelPtr = numpyArray.data(i, 0);
+                //     memcpy(bufferChannelPtr, numpyChannelPtr, sizeof(float) * numSamples);
+                // }
             }
+            // py::gil_scoped_release release;
+        
         }
     }
 }
@@ -274,9 +235,8 @@ bool PythonProcessor::stopAcquisition() {
         catch (py::error_already_set& e) {
             handlePythonException(e);
         }
-        return true;
     }
-    return false;
+    return true;
 }
 
 void PythonProcessor::startRecording() {
@@ -309,12 +269,105 @@ void PythonProcessor::parameterValueChanged(Parameter* param)
 {
     if (param->getName().equalsIgnoreCase("script_path")) 
     {
+        // Initialize python interpreter if not already
+        if(Py_IsInitialized() == 0)
+            initInterpreter(getParameter("python_home")->getValueAsString());
+
         scriptPath = param->getValueAsString();
         importModule();
         updateSettings();
     }
+    else if (param->getName().equalsIgnoreCase("python_home")) 
+    {
+        initInterpreter(param->getValueAsString());
+    }
 }
 
+
+bool PythonProcessor::initInterpreter(String pythonHome)
+{
+    File targetFolder;
+
+    if(Py_IsInitialized() > 0)
+    {
+        LOGD("Python Interpreter already initialized from: ", String(Py_GetPythonHome()));
+        return true;
+    }
+
+    if(pythonHome == String())
+    {
+        AlertWindow::showMessageBox (AlertWindow::InfoIcon,
+                                    "Select Python Home path",
+                                    "To use the plugin you need provide the path to your preferred Python installation. "
+                                    "Please select the folder where your python is located in the next step.");
+                                    
+        FileChooser chooser ("Please select the path to your preferred Python installation",
+                            { File::getSpecialLocation(File::userHomeDirectory) });
+
+        if (chooser.browseForDirectory())
+        {
+            targetFolder = chooser.getResult();
+            if (targetFolder.getFullPathName().isEmpty())
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+
+    }
+    else
+    {
+        targetFolder = File(pythonHome);
+    }
+
+    try
+    {
+        getParameter("python_home")->currentValue = targetFolder.getFullPathName();
+        Py_SetPythonHome(targetFolder.getFullPathName().toWideCharPointer());
+
+        String pythonPaths = String();
+
+    #if JUCE_WINDOWS
+        pythonPaths = targetFolder.getFullPathName()
+                        + ";"
+                        + targetFolder.getChildFile("lib").getFullPathName()
+                        + ";"
+                        + targetFolder.getChildFile("lib/site-packages").getFullPathName()
+                        + ";"
+                        + targetFolder.getChildFile("DLLs").getFullPathName();
+    #endif
+
+        Py_SetPath(pythonPaths.toWideCharPointer());
+
+        py::initialize_interpreter();
+        {
+            py::gil_scoped_acquire acquire;
+
+            if(Py_IsInitialized() > 0)
+                LOGC("Python Interpreter initialized successfully! Python Home: ", String(Py_GetPythonHome()));
+            
+            py::module sys = py::module::import("sys");
+            py::list path = sys.attr("path");
+
+            LOGD("Python sys paths:")
+            // Check if the path was added successfully
+            for (auto p : path) {
+                LOGD(p.cast<std::string>());
+            }
+        }
+
+        return true;
+    }
+    catch(std::exception& e)
+    {   
+        PyErr_Print();
+        LOGE(e.what());
+        return false;
+    }
+}
 
 bool PythonProcessor::importModule()
 {
@@ -328,10 +381,6 @@ bool PythonProcessor::importModule()
 
     try
     {
-        LOGC("Acquiring scope...");
-        // py::gil_scoped_acquire acquire;
-
-        LOGC("Clearing previoud module info...");
         // Clear for new class
         if (pyModule)
         {
@@ -339,7 +388,6 @@ bool PythonProcessor::importModule()
             pyModule = NULL;
         }
 
-        LOGC("Getting module info...");
         // Get module info (change to get from editor)
         std::filesystem::path path(scriptPath.toRawUTF8());
         std::string moduleDir = path.parent_path().string();
@@ -347,7 +395,6 @@ bool PythonProcessor::importModule()
         moduleName = fileName.substr(0, fileName.find_last_of("."));
         
 
-        LOGC("Adding module to sys.path...");
         // Add module directory to sys.path
         py::module_ sys = py::module_::import("sys");
         py::object append = sys.attr("path").attr("append");
@@ -404,7 +451,7 @@ void PythonProcessor::reload()
 
 void PythonProcessor::handlePythonException(py::error_already_set e)
 {
-    LOGC("Python Exception:\n", e.what());
+    LOGE("Python Exception:", e.what());
     moduleReady = false;
     editorPtr->setPathLabelText("(ERROR) " + moduleName);
 }

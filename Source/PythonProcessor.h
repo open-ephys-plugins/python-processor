@@ -119,6 +119,9 @@ public:
 	/** Called whenever a parameter's value is changed */
 	void parameterValueChanged(Parameter* param) override;
 
+	/** Allows the processor to initialize the Python interpreter. */
+	bool initInterpreter(String pythonHome = String());
+
 	/** Imports the python script from scriptPath and rebuilds the processor object. Returns false
 		if the import fails*/
 	bool importModule();
