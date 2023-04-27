@@ -338,9 +338,9 @@ bool PythonProcessor::initInterpreter(String pythonHome)
                         + targetFolder.getChildFile("lib/site-packages").getFullPathName()
                         + ";"
                         + targetFolder.getChildFile("DLLs").getFullPathName();
-    #endif
-
+        
         Py_SetPath(pythonPaths.toWideCharPointer());
+    #endif
 
         py::initialize_interpreter();
         {

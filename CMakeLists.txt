@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.15)
 if (NOT DEFINED GUI_BASE_DIR)
 	if (DEFINED ENV{GUI_BASE_DIR})
 		set(GUI_BASE_DIR $ENV{GUI_BASE_DIR})
@@ -9,6 +9,8 @@ endif()
 
 get_filename_component(PROJECT_FOLDER ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
 get_filename_component(PLUGIN_NAME ${PROJECT_FOLDER} NAME)
+
+set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Build architecture for Mac OS X" FORCE)
 
 project(OE_PLUGIN_${PLUGIN_NAME})
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
@@ -65,7 +67,6 @@ if(MSVC)
 	install(TARGETS ${PLUGIN_NAME} RUNTIME DESTINATION ${GUI_BIN_DIR}/plugins  CONFIGURATIONS ${CMAKE_CONFIGURATION_TYPES})
 	install(FILES $<TARGET_PDB_FILE:${PLUGIN_NAME}> DESTINATION  ${GUI_BIN_DIR}/plugins OPTIONAL)
 
-	set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../libs)
 elseif(LINUX)
 	target_link_libraries(${PLUGIN_NAME} GL X11 Xext Xinerama asound dl freetype pthread rt)
 	set_property(TARGET ${PLUGIN_NAME} APPEND_STRING PROPERTY LINK_FLAGS
@@ -77,10 +78,9 @@ elseif(LINUX)
 elseif(APPLE)
 	set_target_properties(${PLUGIN_NAME} PROPERTIES BUNDLE TRUE)
 	set_property(TARGET ${PLUGIN_NAME} APPEND_STRING PROPERTY LINK_FLAGS
-	"-undefined dynamic_lookup -rpath @loader_path/../../../../shared")
+	"-undefined dynamic_lookup -rpath @loader_path/../../../../shared-api8")
 
-	install(TARGETS ${PLUGIN_NAME} DESTINATION $ENV{HOME}/Library/Application\ Support/open-ephys/PlugIns)
-	set(CMAKE_PREFIX_PATH /opt/local)
+	install(TARGETS ${PLUGIN_NAME} DESTINATION $ENV{HOME}/Library/Application\ Support/open-ephys/plugins-api8)
 endif()
 
 #create filters for vs and xcode
@@ -93,7 +93,7 @@ foreach( src_file IN ITEMS ${SRC_FILES})
 endforeach()
 
 # Find and link python and pybind11
-find_package(Python 3.6 REQUIRED COMPONENTS Interpreter Development)
+find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development)
 add_subdirectory(extern/pybind11)
 target_link_libraries(${PLUGIN_NAME} PRIVATE pybind11::embed)
 
@@ -108,4 +108,9 @@ if(MSVC)
 					${CMAKE_COMMAND} -E copy ${_pythondll} ${GUI_BIN_DIR}/shared)
 	
 	# install(FILES ${Python_RUNTIME_LIBRARY_DIRS}/python3[0-9]+.dll DESTINATION ${GUI_BIN_DIR}/shared)
+elseif(APPLE)
+	file(GLOB _pythondylib "${Python_RUNTIME_LIBRARY_DIRS}/libpython3.[0-9]*.dylib")
+
+	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+					${CMAKE_COMMAND} -E copy ${_pythondylib} $ENV{HOME}/Library/Application\ Support/open-ephys/shared-api8)
 endif()
