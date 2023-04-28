@@ -143,14 +143,14 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
                 pyObject->attr("process")(numpyArray);
 
 
-                // // Write from numpy array?
-                // for (int i = 0; i < numChannels; ++i) {
-                //     int globalChannelIndex = getGlobalChannelIndex(stream->getStreamId(), i);
+                // // Write back from numpy array
+                for (int i = 0; i < numChannels; ++i) {
+                    int globalChannelIndex = getGlobalChannelIndex(stream->getStreamId(), i);
 
-                //     float* bufferChannelPtr = buffer.getWritePointer(globalChannelIndex);
-                //     const float* numpyChannelPtr = numpyArray.data(i, 0);
-                //     memcpy(bufferChannelPtr, numpyChannelPtr, sizeof(float) * numSamples);
-                // }
+                    float* bufferChannelPtr = buffer.getWritePointer(globalChannelIndex);
+                    const float* numpyChannelPtr = numpyArray.data(i, 0);
+                    memcpy(bufferChannelPtr, numpyChannelPtr, sizeof(float) * numSamples);
+                }
             }
             // py::gil_scoped_release release;
         
