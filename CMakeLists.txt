@@ -68,9 +68,9 @@ if(MSVC)
 	install(FILES $<TARGET_PDB_FILE:${PLUGIN_NAME}> DESTINATION  ${GUI_BIN_DIR}/plugins OPTIONAL)
 
 elseif(LINUX)
-	target_link_libraries(${PLUGIN_NAME} GL X11 Xext Xinerama asound dl freetype pthread rt)
+	target_link_libraries(${PLUGIN_NAME} PRIVATE GL X11 Xext Xinerama asound dl freetype pthread rt)
 	set_property(TARGET ${PLUGIN_NAME} APPEND_STRING PROPERTY LINK_FLAGS
-		"-fvisibility=hidden -fPIC -rdynamic -Wl,-rpath,'$$ORIGIN/../shared'")
+		"-fvisibility=hidden -fPIC -rdynamic -Wl,-rpath='$ORIGIN/../shared' -Wl,-rpath='$ORIGIN/../shared-api8'")
 	target_compile_options(${PLUGIN_NAME} PRIVATE -fPIC -rdynamic)
 	target_compile_options(${PLUGIN_NAME} PRIVATE -O3) #enable optimization for linux debug
 	
@@ -108,6 +108,11 @@ if(MSVC)
 					${CMAKE_COMMAND} -E copy ${_pythondll} ${GUI_BIN_DIR}/shared)
 	
 	# install(FILES ${Python_RUNTIME_LIBRARY_DIRS}/python3[0-9]+.dll DESTINATION ${GUI_BIN_DIR}/shared)
+elseif(LINUX)
+	file(GLOB _pythonso "${Python_RUNTIME_LIBRARY_DIRS}/libpython3.[0-9]*.so.*.*")
+
+	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+					${CMAKE_COMMAND} -E copy ${_pythonso} ${GUI_BIN_DIR}/shared)
 elseif(APPLE)
 	file(GLOB _pythondylib "${Python_RUNTIME_LIBRARY_DIRS}/libpython3.[0-9]*.dylib")
 
