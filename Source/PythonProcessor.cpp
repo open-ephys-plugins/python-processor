@@ -42,10 +42,10 @@ PythonProcessor::PythonProcessor()
     currentStream = 0;
 
     addStringParameter(Parameter::GLOBAL_SCOPE, "python_home", "Path to python home", String());
-    addStringParameter(Parameter::GLOBAL_SCOPE, "script_path", "Path to python script", String());
+    addStringParameter(Parameter::GLOBAL_SCOPE, "script_path", "Path to python script", String(), true);
     addIntParameter(Parameter::GLOBAL_SCOPE,
         "current_stream", "Currently selected stream",
-        0, 0, 200000, false);
+        0, 0, 200000);
 }
 
 PythonProcessor::~PythonProcessor()

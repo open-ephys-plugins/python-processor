@@ -114,15 +114,13 @@ void PythonProcessorEditor::updateSettings()
 
 void PythonProcessorEditor::startAcquisition()
 {
-	streamSelector->setEnabled(false);
-	scriptPathButton->setEnabled(false);
+	streamSelection->setEnabled(false);
 	reloadButton->setEnabled(false);
 }
 
 void PythonProcessorEditor::stopAcquisition()
 {
-	streamSelector->setEnabled(true);
-	scriptPathButton->setEnabled(true);
+	streamSelection->setEnabled(true);
 	reloadButton->setEnabled(true);
 }
 
