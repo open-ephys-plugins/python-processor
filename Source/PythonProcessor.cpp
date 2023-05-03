@@ -260,9 +260,14 @@ void PythonProcessor::parameterValueChanged(Parameter* param)
         if(Py_IsInitialized() == 0)
             initInterpreter(getParameter("python_home")->getValueAsString());
 
-        scriptPath = param->getValueAsString();
-        importModule();
-        initModule();
+        String newScriptPath = param->getValueAsString();
+
+        if( !scriptPath.equalsIgnoreCase(newScriptPath) )
+        {
+            scriptPath = newScriptPath;
+            importModule();
+            initModule();
+        }
     }
     else if (param->getName().equalsIgnoreCase("python_home")) 
     {
