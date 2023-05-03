@@ -241,7 +241,16 @@ void PythonProcessor::stopRecording() {
     }
 }
 
-
+bool PythonProcessor::streamExists(uint16 streamId)
+{
+    for (auto stream : getDataStreams())
+    {
+        if (stream->getStreamId() == streamId)
+            return true;
+    }
+    
+    return false;
+}
 
 void PythonProcessor::parameterValueChanged(Parameter* param)
 {
@@ -262,7 +271,9 @@ void PythonProcessor::parameterValueChanged(Parameter* param)
     else if (param->getName().equalsIgnoreCase("current_stream"))
     {
         uint16 candidateStream = (uint16) (int) param->getValue();
-        if(currentStream != candidateStream)
+
+        if(streamExists(candidateStream)
+           && currentStream != candidateStream)
         {
             currentStream = candidateStream;
 
@@ -445,6 +456,10 @@ void PythonProcessor::initModule()
     {
         numChans = getDataStream(currentStream)->getChannelCount();
         sampleRate = getDataStream(currentStream)->getSampleRate();
+    }
+    else
+    {
+        return;
     }
 
     if (moduleReady)

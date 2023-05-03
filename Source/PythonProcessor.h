@@ -60,6 +60,9 @@ private:
 	/** Stream to process*/
 	uint16 currentStream;
 
+	/**Check whether data stream exists */
+	bool streamExists(uint16 streamId);
+
 public:
 	/** The class constructor, used to initialize any members. */
 	PythonProcessor();
