@@ -39,9 +39,13 @@ PythonProcessor::PythonProcessor()
     scriptPath = "";
     moduleName = "";
     editorPtr = NULL;
+    currentStream = 0;
 
     addStringParameter(Parameter::GLOBAL_SCOPE, "python_home", "Path to python home", String());
     addStringParameter(Parameter::GLOBAL_SCOPE, "script_path", "Path to python script", String());
+    addIntParameter(Parameter::GLOBAL_SCOPE,
+        "current_stream", "Currently selected stream",
+        0, 0, 200000, false);
 }
 
 PythonProcessor::~PythonProcessor()
@@ -66,34 +70,8 @@ AudioProcessorEditor* PythonProcessor::createEditor()
 
 void PythonProcessor::updateSettings()
 {
-
-    int numContinuousChannels = continuousChannels.size();
-    // int numEventChannels = eventChannels.size();
-    // int numSpikeChannels = spikeChannels.size();
-
-    float sampleRate = 0;
-    if (numContinuousChannels > 0) {
-        sampleRate = continuousChannels.getFirst()->getSampleRate();
-    }
-    
-
-    if (moduleReady)
-    {
-        // py::gil_scoped_acquire acquire;
-        if (pyObject)
-        {
-            delete pyObject;
-            pyObject = NULL;
-        }
-
-        try {
-            pyObject = new py::object(pyModule->attr("PyProcessor")(numContinuousChannels, sampleRate));
-        }
-
-        catch (py::error_already_set& e) {
-            handlePythonException(e);
-        }
-    }
+    if (getDataStreams().size() == 0)
+        currentStream = 0;
 }
 
 void PythonProcessor::initialize(bool signalChainIsLoading)
@@ -116,7 +94,7 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
     for (auto stream : getDataStreams())
     {
 
-        if ((*stream)["enable_stream"])
+        if (stream->getStreamId() == currentStream)
         {
 
             const uint16 streamId = stream->getStreamId();
@@ -275,11 +253,22 @@ void PythonProcessor::parameterValueChanged(Parameter* param)
 
         scriptPath = param->getValueAsString();
         importModule();
-        updateSettings();
+        initModule();
     }
     else if (param->getName().equalsIgnoreCase("python_home")) 
     {
         initInterpreter(param->getValueAsString());
+    }
+    else if (param->getName().equalsIgnoreCase("current_stream"))
+    {
+        uint16 candidateStream = (uint16) (int) param->getValue();
+        if(currentStream != candidateStream)
+        {
+            currentStream = candidateStream;
+
+            if(moduleReady)
+                initModule();
+        }
     }
 }
 
@@ -417,9 +406,6 @@ bool PythonProcessor::importModule()
         editorPtr->setPathLabelText("No Module Loaded");
         moduleReady = false;
         return false;
-    } catch (py::error_already_set &e)
-    {
-        handlePythonException(e);
     }
 }
 
@@ -442,10 +428,47 @@ void PythonProcessor::reload()
         LOGC("Module successfully reloaded");
         moduleReady = true;
         editorPtr->setPathLabelText(moduleName);
+        initModule();
     }
     else 
     {
         LOGC("There is no module to reload");
+    }
+}
+
+void PythonProcessor::initModule()
+{
+    int numChans = 0;
+    float sampleRate = 0;
+    
+    if(currentStream > 0)
+    {
+        numChans = getDataStream(currentStream)->getChannelCount();
+        sampleRate = getDataStream(currentStream)->getSampleRate();
+    }
+
+    if (moduleReady)
+    {
+        LOGC("Initializing module with ", numChans, " channels at ", sampleRate, " Hz");
+        // py::gil_scoped_acquire acquire;
+        if (pyObject)
+        {
+            delete pyObject;
+            pyObject = NULL;
+        }
+
+        try {
+            pyObject = new py::object(pyModule->attr("PyProcessor")(numChans, sampleRate));
+        }
+
+        catch (std::exception& exc)
+        {
+            LOGC("Failed to initialize Python module.");
+            LOGC(exc.what());
+
+            editorPtr->setPathLabelText("(ERROR) " + moduleName);
+            moduleReady = false;
+        }
     }
 }
 

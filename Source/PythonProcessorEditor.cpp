@@ -57,38 +57,97 @@ PythonProcessorEditor::PythonProcessorEditor(PythonProcessor* parentNode)
 	// Set ptr to parent
 	pythonProcessor = parentNode;
 
-    desiredWidth = 200;
+    desiredWidth = 190;
 
-	scriptPathLabel = new Label("Script Path Label", "No Module Loaded");
+	streamSelection = std::make_unique<ComboBox>("Stream Selector");
+    streamSelection->setBounds(20, 32, 155, 20);
+    streamSelection->addListener(this);
+    addAndMakeVisible(streamSelection.get());
+
+	scriptPathLabel = std::make_unique<Label>("Script Path Label", "No Module Loaded");
 	scriptPathLabel->setTooltip(scriptPathLabel->getText());
 	scriptPathLabel->setMinimumHorizontalScale(0.7f);
-	scriptPathLabel->setJustificationType(Justification::centredRight);
-	scriptPathLabel->setBounds(20, 35, 137, 20);
+	scriptPathLabel->setBounds(20, 65, 135, 20);
 	scriptPathLabel->setColour(Label::backgroundColourId, Colours::grey);
 	scriptPathLabel->setColour(Label::backgroundWhenEditingColourId, Colours::white);
 	scriptPathLabel->setJustificationType(Justification::centredLeft);
-	addAndMakeVisible(scriptPathLabel);
+	addAndMakeVisible(scriptPathLabel.get());
 
 	Parameter* scriptPathPtr = getProcessor()->getParameter("script_path");
-	addCustomParameterEditor(new ScriptPathButton(scriptPathPtr), 162, 35);
+	addCustomParameterEditor(new ScriptPathButton(scriptPathPtr), 160, 65);
 
-	reimportButton = new UtilityButton("Reload", Font(12));
-	reimportButton->setBounds(60, 80, 80, 30);
-	reimportButton->addListener(this);
-	addAndMakeVisible(reimportButton);
+	reloadButton = std::make_unique<UtilityButton>("Reload", Font(12));
+	reloadButton->setBounds(60, 95, 80, 25);
+	reloadButton->addListener(this);
+	addAndMakeVisible(reloadButton.get());
 
+}
+
+void PythonProcessorEditor::updateSettings()
+{
+ 
+    streamSelection->clear();
+
+	for (auto stream : getProcessor()->getDataStreams())
+	{
+        if (currentStream == 0)
+            currentStream = stream->getStreamId();
+        
+		streamSelection->addItem(stream->getName(), stream->getStreamId());
+	}
+
+    if (streamSelection->indexOfItemId(currentStream) == -1)
+    {
+        if (streamSelection->getNumItems() > 0)
+            currentStream = streamSelection->getItemId(0);
+        else
+            currentStream = 0;
+    }
+		
+    if (currentStream > 0)
+    {
+        streamSelection->setSelectedId(currentStream, sendNotification);
+    }
+        
+    
+}
+
+void PythonProcessorEditor::startAcquisition()
+{
+	streamSelector->setEnabled(false);
+	scriptPathButton->setEnabled(false);
+	reloadButton->setEnabled(false);
+}
+
+void PythonProcessorEditor::stopAcquisition()
+{
+	streamSelector->setEnabled(true);
+	scriptPathButton->setEnabled(true);
+	reloadButton->setEnabled(true);
 }
 
 void PythonProcessorEditor::buttonClicked(Button* button)
 {
 
-	if (button == reimportButton)
+	if (button == reloadButton.get())
 	{
 		pythonProcessor->reload();
-		pythonProcessor->updateSettings();
 	}
 
 }
+
+void PythonProcessorEditor::comboBoxChanged(ComboBox* cb)
+{
+    if (cb == streamSelection.get())
+    {
+		currentStream = cb->getSelectedId();
+        
+        if (currentStream > 0)
+        	getProcessor()->getParameter("current_stream")->setNextValue(currentStream);
+    }
+
+}
+
 
 void PythonProcessorEditor::setPathLabelText(String s)
 {

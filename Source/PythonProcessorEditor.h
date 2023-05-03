@@ -56,7 +56,8 @@ private:
 
 class PythonProcessorEditor :
 	public GenericEditor,
-	public Button::Listener
+	public Button::Listener,
+	public ComboBox::Listener
 {
 public:
 
@@ -66,8 +67,20 @@ public:
 	/** Destructor */
 	~PythonProcessorEditor() { }
 
+	/** Called when underlying settings are updated */
+	void updateSettings() override;
+
+	/** Called just prior to the start of acquisition, to allow custom commands. */
+	void startAcquisition() override;
+
+	/** Called after the end of acquisition, to allow custom commands .*/
+	void stopAcquisition() override;
+
 	/** Respond to button clicks*/
-	void buttonClicked(Button* button);
+	void buttonClicked(Button* button) override;
+
+	/** Called when a ComboBox changes*/
+	void comboBoxChanged(ComboBox* comboBox) override;
 
 	/** Sets the text of the path label */
 	void setPathLabelText(String);
@@ -76,9 +89,13 @@ private:
 
 	PythonProcessor* pythonProcessor;
 
-	ScopedPointer<Label> scriptPathLabel;
-	ScopedPointer<Button> scriptPathButton;
-	ScopedPointer<Button> reimportButton;
+	std::unique_ptr<Label> scriptPathLabel;
+	std::unique_ptr<Button> scriptPathButton;
+	std::unique_ptr<Button> reloadButton;
+	std::unique_ptr<ComboBox> streamSelection;
+
+	uint16 currentStream = 0;
+
 
 	/** Generates an assertion if this class leaks */
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PythonProcessorEditor);

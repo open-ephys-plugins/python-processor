@@ -57,6 +57,8 @@ private:
 	/** Pointer to editor */
 	PythonProcessorEditor* editorPtr;
 
+	/** Stream to process*/
+	uint16 currentStream;
 
 public:
 	/** The class constructor, used to initialize any members. */
@@ -128,6 +130,8 @@ public:
 
 	/** Reloads the current python module if one is loaded */
 	void reload();
+	
+	void initModule();
 
 	/** Deals with python exceptions (print and turn off module for now) */
 	void handlePythonException(py::error_already_set e);
