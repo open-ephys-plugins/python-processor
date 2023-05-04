@@ -86,7 +86,8 @@ PythonProcessorEditor::PythonProcessorEditor(PythonProcessor* parentNode)
 void PythonProcessorEditor::updateSettings()
 {
  
-    streamSelection->clear();
+    currentStream = (uint16) (int)getProcessor()->getParameter("current_stream")->getValue();
+	streamSelection->clear();
 
 	for (auto stream : getProcessor()->getDataStreams())
 	{
