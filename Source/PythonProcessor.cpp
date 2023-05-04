@@ -52,11 +52,13 @@ PythonProcessor::~PythonProcessor()
 {
     if(Py_IsInitialized() > 0)
     {
-        delete pyModule;
-        delete pyObject;
-        py::gil_scoped_release release;
+        {
+            delete pyModule;
+            delete pyObject;
+            py::gil_scoped_release release;
+        }
+        py::finalize_interpreter();
     }
-    py::finalize_interpreter();
 }
 
 
@@ -89,7 +91,7 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
     if( !moduleReady )
         return;
 
-    checkForEvents(true);
+    // checkForEvents(true);
 
     for (auto stream : getDataStreams())
     {
@@ -136,55 +138,43 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
     }
 }
 
-void PythonProcessor::handleTTLEvent(TTLEventPtr event)
-{
-    // Get ttl info
-    const int state = event->getState() ? 1 : 0;
-    const int64 sampleNumber = event->getSampleNumber();
-    const int channel = event->getChannelIndex();
-    const uint8 line = event->getLine();
-    const uint16 streamId = event->getStreamId();
+// void PythonProcessor::handleTTLEvent(TTLEventPtr event)
+// {
+//     // Get ttl info
+//     const int state = event->getState() ? 1 : 0;
+//     const int64 sampleNumber = event->getSampleNumber();
+//     const int channel = event->getChannelIndex();
+//     const uint8 line = event->getLine();
+//     const uint16 streamId = event->getStreamId();
 
-    // Give to python
-    // py::gil_scoped_acquire acquire;
+//     // Give to python
+//     // py::gil_scoped_acquire acquire;
 
-    try {
-        pyObject->attr("handle_ttl_event")(state, sampleNumber, channel, line, streamId);
-    }
-    catch (py::error_already_set& e) {
-        handlePythonException(e);
-    }
-}
-
-
-void PythonProcessor::handleSpike(SpikePtr event)
-{
-    // py::gil_scoped_acquire acquire;
-    try {
-        pyObject->attr("handle_spike_event")();
-    }
-    catch (py::error_already_set& e) {
-        handlePythonException(e);
-    }
-}
+//     try {
+//         pyObject->attr("handle_ttl_event")(state, sampleNumber, channel, line, streamId);
+//     }
+//     catch (py::error_already_set& e) {
+//         handlePythonException(e);
+//     }
+// }
 
 
-void PythonProcessor::handleBroadcastMessage(String message)
-{
+// void PythonProcessor::handleSpike(SpikePtr event)
+// {
+//     // py::gil_scoped_acquire acquire;
+//     try {
+//         pyObject->attr("handle_spike_event")();
+//     }
+//     catch (py::error_already_set& e) {
+//         handlePythonException(e);
+//     }
+// }
 
-}
 
+// void PythonProcessor::handleBroadcastMessage(String message)
+// {
 
-void PythonProcessor::saveCustomParametersToXml(XmlElement* parentElement)
-{
-
-}
-
-
-void PythonProcessor::loadCustomParametersFromXml(XmlElement* parentElement)
-{
-
-}
+// }
 
 bool PythonProcessor::startAcquisition() 
 {

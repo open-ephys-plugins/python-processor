@@ -87,27 +87,19 @@ public:
 		Visualizer plugins typically use this method to send data to the canvas for display purposes */
 	void process(AudioBuffer<float>& buffer) override;
 
-	/** Handles events received by the processor
-		Called automatically for each received event whenever checkForEvents() is called from
-		the plugin's process() method */
-	void handleTTLEvent(TTLEventPtr event) override;
+	// /** Handles events received by the processor
+	// 	Called automatically for each received event whenever checkForEvents() is called from
+	// 	the plugin's process() method */
+	// void handleTTLEvent(TTLEventPtr event) override;
 
-	/** Handles spikes received by the processor
-		Called automatically for each received spike whenever checkForEvents(true) is called from
-		the plugin's process() method */
-	void handleSpike(SpikePtr spike) override;
+	// /** Handles spikes received by the processor
+	// 	Called automatically for each received spike whenever checkForEvents(true) is called from
+	// 	the plugin's process() method */
+	// void handleSpike(SpikePtr spike) override;
 
-	/** Handles broadcast messages sent during acquisition
-		Called automatically whenever a broadcast message is sent through the signal chain */
-	void handleBroadcastMessage(String message) override;
-
-	/** Saving custom settings to XML. This method is not needed to save the state of
-		Parameter objects */
-	void saveCustomParametersToXml(XmlElement* parentElement) override;
-
-	/** Load custom settings from XML. This method is not needed to load the state of
-		Parameter objects*/
-	void loadCustomParametersFromXml(XmlElement* parentElement) override;
+	// /** Handles broadcast messages sent during acquisition
+	// 	Called automatically whenever a broadcast message is sent through the signal chain */
+	// void handleBroadcastMessage(String message) override;
 
 	/** Called at the start of acquisition.*/
 	bool startAcquisition() override;
@@ -134,6 +126,7 @@ public:
 	/** Reloads the current python module if one is loaded */
 	void reload();
 	
+	/** Initializes the python script by calling __init__() */
 	void initModule();
 
 	/** Deals with python exceptions (print and turn off module for now) */
