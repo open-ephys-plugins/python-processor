@@ -35,9 +35,16 @@ class PyProcessor:
     
     def __init__(self, num_channels, sample_rate):
         """ A new bandpass filter is initialized whenever the plugin settings are updated """
+        
         self.num_chans = num_channels
         self.sample_rate = sample_rate
-        self.sos = butter_bandpass(500, 2000, sample_rate)
+        
+        self.sos = []
+        sos_t = butter_bandpass(500, 2000, sample_rate)
+        for i in range(self.num_chans):
+            self.sos.append(sos_t)
+        
+        self.sos = np.asarray(self.sos)
     
     def process(self, data):
         """
@@ -48,7 +55,7 @@ class PyProcessor:
         """
         try:
             for i in range(self.num_chans):
-                data[i] = butter_bandpass_filter(self.sos, data[i])
+                data[i] = butter_bandpass_filter(self.sos[i], data[i])
         except:
             pass
         
