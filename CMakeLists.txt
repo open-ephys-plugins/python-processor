@@ -109,21 +109,20 @@ message(STATUS "Python_LIBRARY_DIRS: ${Python_LIBRARY_DIRS}")
 
 if(MSVC)
 	file(GLOB _pythondll "${Python_RUNTIME_LIBRARY_DIRS}/python3[0-9]*.dll")
+	file(GLOB _zlib "${Python_RUNTIME_LIBRARY_DIRS}/zlib.dll")
 
-	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
-					${CMAKE_COMMAND} -E copy ${_pythondll} ${GUI_BIN_DIR}/shared)
 	if(COPY_PYTHON_DL)
 		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
 					${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
 
 		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
-						${CMAKE_COMMAND} -E copy ${_pythondll} $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
+						${CMAKE_COMMAND} -E copy ${_pythondll} ${_zlib} $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
+	else()
+		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+					${CMAKE_COMMAND} -E copy ${_pythondll} ${_zlib} ${GUI_BIN_DIR}/shared)
 	endif()
 elseif(LINUX)
 	file(GLOB _pythonso "${Python_RUNTIME_LIBRARY_DIRS}/libpython3.[0-9]*.so.*.*")
-
-	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
-					${CMAKE_COMMAND} -E copy ${_pythonso} ${GUI_BIN_DIR}/shared)
 	
 	if(COPY_PYTHON_DL)
 		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
@@ -131,18 +130,21 @@ elseif(LINUX)
 
 		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
 						${CMAKE_COMMAND} -E copy ${_pythonso} $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
+	else()
+		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+					${CMAKE_COMMAND} -E copy ${_pythonso} ${GUI_BIN_DIR}/shared)
 	endif()
 elseif(APPLE)
 	file(GLOB _pythondylib "${Python_RUNTIME_LIBRARY_DIRS}/libpython3.[0-9]*.dylib")
 
-	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
-					${CMAKE_COMMAND} -E copy ${_pythondylib} $ENV{HOME}/Library/Application\ Support/open-ephys/shared-api8)
-
 	if(COPY_PYTHON_DL)
 		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
-					${CMAKE_COMMAND} -E make_directory $<TARGET_BUNDLE_DIR:${PLUGIN_NAME}>/shared)
+					${CMAKE_COMMAND} -E make_directory $<TARGET_BUNDLE_DIR:${PLUGIN_NAME}>/../shared)
 
 		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
-						${CMAKE_COMMAND} -E copy ${_pythondylib} $<TARGET_BUNDLE_DIR:${PLUGIN_NAME}>/shared)
+						${CMAKE_COMMAND} -E copy ${_pythondylib} $<TARGET_BUNDLE_DIR:${PLUGIN_NAME}>/../shared)
+	else()
+		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+					${CMAKE_COMMAND} -E copy ${_pythondylib} $ENV{HOME}/Library/Application\ Support/open-ephys/shared-api8)
 	endif()
 endif()
