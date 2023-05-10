@@ -1,0 +1,57 @@
+name: mac
+
+on: 
+  push:
+
+jobs:
+
+  build-mac:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+          submodules: true
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        activate-environment: oe-python-plugin
+        python-version: "3.10"
+        auto-activate-base: false
+    - name: setup
+      run: |
+        cd ../..
+        git clone https://github.com/open-ephys/plugin-GUI.git --branch main
+        cd plugin-GUI/Build && cmake -G "Xcode" ..
+    - name: build
+      run: |
+        cd Build
+        cmake -G "Xcode" -DPython_ROOT_DIR="$CONDA/envs/oe-python-plugin" -DCOPY_PYTHON_DL=ON ..
+        xcodebuild -configuration Release
+#    - name: test
+#      run: cd build && ctest
+    - name: package
+      env:
+        build_dir: "Build/Release"
+        package: PythonProcessor-mac
+      run: |
+        plugin_api=$(grep -rnw ../../plugin-GUI/Source -e '#define PLUGIN_API_VER' | grep -Eo "[0-9]" | tail -1)
+        tag=$(grep -w Source/OpenEphysLib.cpp -e 'info->libVersion' | grep -Eo "[0-9]+.[0-9]+.[0-9]+")
+        new_plugin_ver=$tag-API$plugin_api
+        mkdir plugins 
+        cp -r $build_dir/*.bundle plugins
+        echo "zipfile=${package}_${new_plugin_ver}.zip" >> $GITHUB_ENV
+        zip -r -X ${{ env.zipfile }} plugins $build_dir/shared
+    - uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.zipfile }}
+        path: ${{ env.zipfile }}
+    - name: deploy
+      if: github.ref == 'refs/heads/main'
+      env:
+        artifactoryApiKey: ${{ secrets.artifactoryApiKey }}
+      run: |
+        curl -H "X-JFrog-Art-Api:$artifactoryApiKey" -T ${{ env.zipfile }} "https://openephys.jfrog.io/artifactory/PythonProcessor-plugin/mac/${{ env.zipfile }}"

@@ -1,0 +1,76 @@
+name: Windows
+
+on: 
+  push:
+
+jobs:
+
+  build-windows:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2019]
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+          submodules: true
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        activate-environment: oe-python-plugin
+        python-version: "3.10"
+        auto-activate-base: false
+    - name: setup
+      env: 
+        repo: open-ephys-gui
+        package: "open-ephys-lib"
+      run: |
+        cd ../..
+        git clone https://github.com/open-ephys/plugin-GUI.git --branch main
+        cd plugin-GUI/Build
+        cmake -G "Visual Studio 16 2019" -A x64 .. 
+        mkdir Release && cd Release
+        curl -L https://openephysgui.jfrog.io/artifactory/Libraries/open-ephys-lib-v0.6.0.zip --output open-ephys-lib.zip 
+        unzip open-ephys-lib.zip
+      shell: bash
+    - name: configure
+      run: |
+        cd Build
+        cmake -G "Visual Studio 16 2019" -A x64 -DPython_ROOT_DIR="$CONDA/envs/oe-python-plugin" -DCOPY_PYTHON_DL=ON .. 
+      shell: bash
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.1
+    - name: build-plugin
+      run: |
+        cd Build
+        msbuild INSTALL.vcxproj -p:Configuration=Release -p:Platform=x64
+      shell: cmd
+# TODO: Perform some basic testing before publishing...
+#    - name: test
+#      run: cd build && ctest
+    - name: package
+      env:
+        build_dir: "Build/Release"
+        package: PythonProcessor-windows
+      run: |
+        plugin_api=$(grep -rnw ../../plugin-GUI/Source -e '#define PLUGIN_API_VER' | grep -Eo "[0-9]*" | tail -1)
+        tag=$(grep -w Source/OpenEphysLib.cpp -e 'info->libVersion' | grep -Eo "[0-9]+.[0-9]+.[0-9]+")
+        new_plugin_ver=$tag-API$plugin_api
+        mkdir plugins
+        cp $build_dir/*.dll plugins
+        echo "zipfile=${package}_${new_plugin_ver}.zip" >> $GITHUB_ENV
+        powershell Compress-Archive -Path "plugins" -DestinationPath ${{ env.zipfile }}
+        powershell Compress-Archive -U -Path "$build_dir/shared" -DestinationPath ${{ env.zipfile }}
+      shell: bash
+    - uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.zipfile }}
+        path: ${{ env.zipfile }}
+    - name: deploy
+      if: github.ref == 'refs/heads/main'
+      env:
+        artifactoryApiKey: ${{ secrets.artifactoryApiKey }}
+      run: |
+        curl -H "X-JFrog-Art-Api:$artifactoryApiKey" -T ${{ env.zipfile }} "https://openephys.jfrog.io/artifactory/PythonProcessor-plugin/windows/${{ env.zipfile }}"
+      shell: bash
