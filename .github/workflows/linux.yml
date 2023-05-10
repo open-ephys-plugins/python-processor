@@ -32,14 +32,12 @@ jobs:
         run: |
           conda env list
           cd Build
-          cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DPython_ROOT_DIR="$CONDA/envs/oe-python-plugin" ..
+          cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DPython_ROOT_DIR="$CONDA/envs/oe-python-plugin" -DCOPY_PYTHON_DL=ON ..
           make
   #    - name: test
   #      run: cd build && ctest
-      - name: deploy
-        if: github.ref == 'refs/heads/main'
+      - name: package
         env:
-          artifactoryApiKey: ${{ secrets.artifactoryApiKey }}
           build_dir: "Build"
           package: PythonProcessor-linux
         run: |
@@ -48,6 +46,15 @@ jobs:
           new_plugin_ver=$tag-API$plugin_api
           mkdir plugins 
           cp -r $build_dir/*.so plugins
-          zipfile=${package}_${new_plugin_ver}.zip
-          zip -r -X $zipfile plugins
-          curl -H "X-JFrog-Art-Api:$artifactoryApiKey" -T $zipfile "https://openephys.jfrog.io/artifactory/PythonProcessor-plugin/linux/$zipfile"
+          echo "zipfile=${package}_${new_plugin_ver}.zip" >> $GITHUB_ENV
+          zip -r -X ${{ env.zipfile }} plugins $build_dir/shared
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.zipfile }}
+          path: ${{ env.zipfile }}
+      - name: deploy
+        if: github.ref == 'refs/heads/main'
+        env:
+          artifactoryApiKey: ${{ secrets.artifactoryApiKey }}
+        run: |
+          curl -H "X-JFrog-Art-Api:$artifactoryApiKey" -T ${{ env.zipfile }} "https://openephys.jfrog.io/artifactory/PythonProcessor-plugin/linux/${{ env.zipfile }}"
