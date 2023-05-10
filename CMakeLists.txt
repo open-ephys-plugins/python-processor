@@ -92,6 +92,8 @@ foreach( src_file IN ITEMS ${SRC_FILES})
 	source_group("${group_name}" FILES "${src_file}")
 endforeach()
 
+option(COPY_PYTHON_DL "Creates a directory and copies the python dynamic library for packaging" OFF)
+
 # Find and link python and pybind11
 find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development)
 add_subdirectory(extern/pybind11)
@@ -101,21 +103,38 @@ message(STATUS "Python_RUNTIME_LIBRARY_DIRS: ${Python_RUNTIME_LIBRARY_DIRS}")
 message(STATUS "Python_INCLUDE_DIRS: ${Python_INCLUDE_DIRS}")
 message(STATUS "Python_LIBRARY_DIRS: ${Python_LIBRARY_DIRS}")
 
+if(COPY_PYTHON_DL)
+	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+					${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
+endif()
+
 if(MSVC)
 	file(GLOB _pythondll "${Python_RUNTIME_LIBRARY_DIRS}/python3[0-9]*.dll")
 
 	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
 					${CMAKE_COMMAND} -E copy ${_pythondll} ${GUI_BIN_DIR}/shared)
-	
-	# install(FILES ${Python_RUNTIME_LIBRARY_DIRS}/python3[0-9]+.dll DESTINATION ${GUI_BIN_DIR}/shared)
+	if(COPY_PYTHON_DL)
+		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+						${CMAKE_COMMAND} -E copy ${_pythondll} $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
+	endif()
 elseif(LINUX)
 	file(GLOB _pythonso "${Python_RUNTIME_LIBRARY_DIRS}/libpython3.[0-9]*.so.*.*")
 
 	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
 					${CMAKE_COMMAND} -E copy ${_pythonso} ${GUI_BIN_DIR}/shared)
+	
+	if(COPY_PYTHON_DL)
+		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+						${CMAKE_COMMAND} -E copy ${_pythonso} $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
+	endif()
 elseif(APPLE)
 	file(GLOB _pythondylib "${Python_RUNTIME_LIBRARY_DIRS}/libpython3.[0-9]*.dylib")
 
 	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
 					${CMAKE_COMMAND} -E copy ${_pythondylib} $ENV{HOME}/Library/Application\ Support/open-ephys/shared-api8)
+
+	if(COPY_PYTHON_DL)
+		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+						${CMAKE_COMMAND} -E copy ${_pythondylib} $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
+	endif()
 endif()
