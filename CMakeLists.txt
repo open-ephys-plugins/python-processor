@@ -107,17 +107,15 @@ message(STATUS "Python_RUNTIME_LIBRARY_DIRS: ${Python_RUNTIME_LIBRARY_DIRS}")
 message(STATUS "Python_INCLUDE_DIRS: ${Python_INCLUDE_DIRS}")
 message(STATUS "Python_LIBRARY_DIRS: ${Python_LIBRARY_DIRS}")
 
-if(COPY_PYTHON_DL)
-	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
-					${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
-endif()
-
 if(MSVC)
 	file(GLOB _pythondll "${Python_RUNTIME_LIBRARY_DIRS}/python3[0-9]*.dll")
 
 	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
 					${CMAKE_COMMAND} -E copy ${_pythondll} ${GUI_BIN_DIR}/shared)
 	if(COPY_PYTHON_DL)
+		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+					${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
+
 		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
 						${CMAKE_COMMAND} -E copy ${_pythondll} $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
 	endif()
@@ -129,6 +127,9 @@ elseif(LINUX)
 	
 	if(COPY_PYTHON_DL)
 		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+					${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
+
+		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
 						${CMAKE_COMMAND} -E copy ${_pythonso} $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
 	endif()
 elseif(APPLE)
@@ -139,6 +140,9 @@ elseif(APPLE)
 
 	if(COPY_PYTHON_DL)
 		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
-						${CMAKE_COMMAND} -E copy ${_pythondylib} $<TARGET_FILE_DIR:${PLUGIN_NAME}>/shared)
+					${CMAKE_COMMAND} -E make_directory $<TARGET_BUNDLE_DIR:${PLUGIN_NAME}>/shared)
+
+		add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND 
+						${CMAKE_COMMAND} -E copy ${_pythondylib} $<TARGET_BUNDLE_DIR:${PLUGIN_NAME}>/shared)
 	endif()
 endif()
