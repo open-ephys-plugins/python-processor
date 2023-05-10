@@ -43,8 +43,9 @@ jobs:
         new_plugin_ver=$tag-API$plugin_api
         mkdir plugins 
         cp -r $build_dir/*.bundle plugins
-        echo "zipfile=${package}_${new_plugin_ver}.zip" >> $GITHUB_ENV
-        zip -r -X ${{ env.zipfile }} plugins $build_dir/shared
+        zipfile=${package}_${new_plugin_ver}.zip
+        echo "zipfile=${zipfile}" >> $GITHUB_ENV
+        zip -r -X $zipfile plugins $build_dir/shared
     - uses: actions/upload-artifact@v3
       with:
         name: ${{ env.zipfile }}
