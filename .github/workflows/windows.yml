@@ -59,10 +59,11 @@ jobs:
         new_plugin_ver=$tag-API$plugin_api
         mkdir plugins
         cp $build_dir/*.dll plugins
+        mv $build_dir/shared .
         zipfile=${package}_${new_plugin_ver}.zip
         echo "zipfile=${zipfile}" >> $GITHUB_ENV
-        powershell Compress-Archive -Path "plugins" -DestinationPath ${zipfile}}
-        powershell Compress-Archive -U -Path "$build_dir/shared" -DestinationPath ${zipfile}
+        powershell Compress-Archive -Path "plugins" -DestinationPath ${zipfile}
+        powershell Compress-Archive -U -Path "shared" -DestinationPath ${zipfile}
       shell: bash
     - uses: actions/upload-artifact@v3
       with:
