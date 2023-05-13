@@ -90,7 +90,7 @@ public:
 	// /** Handles events received by the processor
 	// 	Called automatically for each received event whenever checkForEvents() is called from
 	// 	the plugin's process() method */
-	// void handleTTLEvent(TTLEventPtr event) override;
+	void handleTTLEvent(TTLEventPtr event) override;
 
 	// /** Handles spikes received by the processor
 	// 	Called automatically for each received spike whenever checkForEvents(true) is called from

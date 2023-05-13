@@ -91,7 +91,7 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
     if( !moduleReady )
         return;
 
-    // checkForEvents(true);
+    checkForEvents(true);
 
     for (auto stream : getDataStreams())
     {
@@ -138,25 +138,29 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
     }
 }
 
-// void PythonProcessor::handleTTLEvent(TTLEventPtr event)
-// {
-//     // Get ttl info
-//     const int state = event->getState() ? 1 : 0;
-//     const int64 sampleNumber = event->getSampleNumber();
-//     const int channel = event->getChannelIndex();
-//     const uint8 line = event->getLine();
-//     const uint16 streamId = event->getStreamId();
+void PythonProcessor::handleTTLEvent(TTLEventPtr event)
+{
+    if (event->getStreamId() == currentStream)
+    {
+        // Get ttl info
+        auto chanInfo = event->getChannelInfo();
+        auto channelName = chanInfo->getName();
+        const int sourceNodeId = chanInfo->getSourceNodeId();
+        const int64 sampleNumber = event->getSampleNumber();
+        const uint8 line = event->getLine();
+        const int state = event->getState() ? 1 : 0;
 
-//     // Give to python
-//     // py::gil_scoped_acquire acquire;
+        // Give to python
+        // py::gil_scoped_acquire acquire;
 
-//     try {
-//         pyObject->attr("handle_ttl_event")(state, sampleNumber, channel, line, streamId);
-//     }
-//     catch (py::error_already_set& e) {
-//         handlePythonException(e);
-//     }
-// }
+        try {
+            pyObject->attr("handle_ttl_event")(sourceNodeId, channelName.toRawUTF8(), sampleNumber, line, state);
+        }
+        catch (py::error_already_set& e) {
+            handlePythonException(e);
+        }
+    }
+}
 
 
 // void PythonProcessor::handleSpike(SpikePtr event)
