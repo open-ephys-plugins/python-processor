@@ -24,8 +24,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define PYTHONPROCESSOR_H_DEFINED
 
 #include <ProcessorHeaders.h>
+#include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
 #include <pybind11/numpy.h>
+
+#include <queue>
 
 #include "PythonProcessorEditor.h"
 
@@ -59,6 +62,17 @@ private:
 
 	/** Stream to process*/
 	uint16 currentStream;
+
+	std::map<uint16, EventChannel*> localEventChannels;
+
+	struct StringTTL
+    {
+        int eventLine;
+		bool state;
+    };
+
+	std::queue<StringTTL> TTLQueue;
+	CriticalSection TTLqueueLock;
 
 	/**Check whether data stream exists */
 	bool streamExists(uint16 streamId);
@@ -100,6 +114,10 @@ public:
 	// /** Handles broadcast messages sent during acquisition
 	// 	Called automatically whenever a broadcast message is sent through the signal chain */
 	// void handleBroadcastMessage(String message) override;
+
+	void addPythonEvent(int line, bool state);
+
+	void triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum);
 
 	/** Called at the start of acquisition.*/
 	bool startAcquisition() override;

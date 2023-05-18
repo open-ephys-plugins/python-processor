@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import signal
+import oe_pyprocessor
 
 def butter_bandpass(lowcut, highcut, sample_rate, order=2):
     """
@@ -33,11 +34,12 @@ def butter_bandpass_filter(sos, data):
 
 class PyProcessor:
     
-    def __init__(self, num_channels, sample_rate):
+    def __init__(self, processor, num_channels, sample_rate):
         """ A new bandpass filter is initialized whenever the plugin settings are updated """
         
         self.num_chans = num_channels
         self.sample_rate = sample_rate
+        self.processor = processor
         
         self.sos = []
         sos_t = butter_bandpass(500, 2000, sample_rate)
@@ -67,6 +69,19 @@ class PyProcessor:
         """ Called when acquisition is stopped """
         pass
     
+    def handle_ttl_event(self, source_node, channel, sample_number, line, state):
+        """
+        Handle each incoming ttl event.
+        
+        Parameters:
+        source_node (int): id of the processor this event was generated from
+        channel (str): name of the event channel
+        sample_number (int): sample number of the event
+        line (int): the line on which event was generated (0-255) 
+        state (bool): event state true (ON) or false (OFF)
+        """
+        pass
+
     def start_recording(self, recording_dir):
         """ 
         Called when recording starts

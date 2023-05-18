@@ -1,13 +1,15 @@
 import numpy as np
+import oe_pyprocessor
 # Add additional imports here
 
 class PyProcessor:
     
-    def __init__(self, num_channels, sample_rate):
+    def __init__(self, processor, num_channels, sample_rate):
         """ 
         A new processor is initialized whenever the plugin settings are updated
         
         Parameters:
+        processor (object): Python Processor class object used for adding events from python.
         num_channels (int): number of input channels in the selected stream.
         sample_rate (float): sample rate of the selected stream
         """
@@ -43,7 +45,7 @@ class PyProcessor:
         channel (str): name of the event channel
         sample_number (int): sample number of the event
         line (int): the line on which event was generated (0-255) 
-        state (int): event state 0 (OFF) or 1 (ON)
+        state (bool): event state True (ON) or False (OFF)
         """
         pass
     

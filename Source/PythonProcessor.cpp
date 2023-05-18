@@ -29,6 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace py = pybind11;
 
+PYBIND11_EMBEDDED_MODULE(oe_pyprocessor, module){
+
+    py::class_<PythonProcessor> (module, "PythonProcessor")
+        .def("add_python_event", &PythonProcessor::addPythonEvent);
+}
 
 PythonProcessor::PythonProcessor()
     : GenericProcessor("Python Processor")
@@ -74,6 +79,30 @@ void PythonProcessor::updateSettings()
 {
     if (getDataStreams().size() == 0)
         currentStream = 0;
+
+    localEventChannels.clear();
+
+    for (auto stream : getDataStreams())
+    {
+        const uint16 streamId = stream->getStreamId();
+        
+        // TTL Channel
+        EventChannel* ttlChan;
+        EventChannel::Settings ttlChannelSettings{
+            EventChannel::Type::TTL,
+            "Python Processor Output",
+            "TTL event triggerd by the python module.",
+            "pythonprocessor.ttl",
+            getDataStream(stream->getStreamId())
+        };
+
+        ttlChan = new EventChannel(ttlChannelSettings);
+        ttlChan->addProcessor(processorInfo.get());
+        eventChannels.add(ttlChan);
+
+        localEventChannels[streamId] = eventChannels.getLast();
+
+    }
 }
 
 void PythonProcessor::initialize(bool signalChainIsLoading)
@@ -93,12 +122,13 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
 
     checkForEvents(true);
 
+    int64 sampleNum = getFirstSampleNumberForBlock(currentStream);
+
     for (auto stream : getDataStreams())
     {
 
         if (stream->getStreamId() == currentStream)
         {
-
             const uint16 streamId = stream->getStreamId();
 
             const int numSamples = getNumSamplesInBlock(streamId);
@@ -135,6 +165,16 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
             // py::gil_scoped_release release;
         
         }
+
+        {
+            ScopedLock TTLlock(TTLqueueLock);
+            while (!TTLQueue.empty())
+            {
+                const StringTTL& TTLmsg = TTLQueue.front();
+                triggerTTLEvent(TTLmsg, sampleNum);
+                TTLQueue.pop();
+            }
+        }
     }
 }
 
@@ -148,7 +188,7 @@ void PythonProcessor::handleTTLEvent(TTLEventPtr event)
         const int sourceNodeId = chanInfo->getSourceNodeId();
         const int64 sampleNumber = event->getSampleNumber();
         const uint8 line = event->getLine();
-        const int state = event->getState() ? 1 : 0;
+        const bool state = event->getState();
 
         // Give to python
         // py::gil_scoped_acquire acquire;
@@ -179,6 +219,29 @@ void PythonProcessor::handleTTLEvent(TTLEventPtr event)
 // {
 
 // }
+
+void PythonProcessor::addPythonEvent(int line, bool state)
+{
+    // LOGC("[PYTHON] Event received!! Line: ", line, " | State: ", state);
+    {
+        ScopedLock TTLlock(TTLqueueLock);
+        if (CoreServices::getAcquisitionStatus()) 
+        {
+            TTLQueue.push({ line, state });
+        }
+    }
+}
+
+void PythonProcessor::triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum)
+{
+    TTLEventPtr event = 
+        TTLEvent::createTTLEvent(localEventChannels[currentStream], 
+                                 sampleNum, 
+                                 TTLmsg.eventLine, 
+                                 TTLmsg.state);
+    addEvent(event, 0);
+    
+}
 
 bool PythonProcessor::startAcquisition() 
 {
@@ -346,13 +409,20 @@ bool PythonProcessor::initInterpreter(String pythonHome)
             py::gil_scoped_acquire acquire;
 
             if(Py_IsInitialized() > 0)
+            {
                 LOGC("Python Interpreter initialized successfully! Python Home: ", String(Py_GetPythonHome()));
+
+                #if JUCE_WINDOWS
+                    py::module_ os = py::module_::import("os");
+                    os.attr("add_dll_directory")
+                        (targetFolder.getChildFile("Library\\bin").getFullPathName().toWideCharPointer());
+                #endif
+            }
             
             py::module sys = py::module::import("sys");
             py::list path = sys.attr("path");
 
             LOGD("Python sys paths:")
-            // Check if the path was added successfully
             for (auto p : path) {
                 LOGD(p.cast<std::string>());
             }
@@ -472,7 +542,7 @@ void PythonProcessor::initModule()
         }
 
         try {
-            pyObject = new py::object(pyModule->attr("PyProcessor")(numChans, sampleRate));
+            pyObject = new py::object(pyModule->attr("PyProcessor")(this, numChans, sampleRate));
         }
 
         catch (std::exception& exc)
