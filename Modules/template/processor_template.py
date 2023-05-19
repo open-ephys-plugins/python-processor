@@ -62,7 +62,6 @@ class PyProcessor:
         sorted_id (int): the sorted ID for this spike
         spike_data (numpy array): N x M numpy array, where N = num_channels & M = num_samples (read-only).
         """
-        # print("SPIKE RECEIVED! Source Node:", source_node, ", Electrode name:", electrode_name, ", Num channels:", num_channels, ", Sample num:", sample_number, ", Sorted ID:", sorted_id)
         pass
     
     def start_recording(self, recording_dir):

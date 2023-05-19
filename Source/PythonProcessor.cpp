@@ -57,6 +57,8 @@ PythonProcessor::~PythonProcessor()
     if(Py_IsInitialized() > 0)
     {
         {
+            delete pyModule;
+            delete pyObject;
             py::gil_scoped_release release;
         }
         py::finalize_interpreter();
@@ -189,11 +191,9 @@ void PythonProcessor::handleTTLEvent(TTLEventPtr event)
         // Give to python
         // py::gil_scoped_acquire acquire;
 
-        try {
+        if(py::hasattr(*pyObject, "handle_ttl_event"))
+        {
             pyObject->attr("handle_ttl_event")(sourceNodeId, channelName.toRawUTF8(), sampleNumber, line, state);
-        }
-        catch (py::error_already_set& e) {
-            handlePythonException("Python Exception!", "Error when handling ttl event in Python:", e);
         }
     }
 }
@@ -224,13 +224,8 @@ void PythonProcessor::handleSpike(SpikePtr spike)
         // py::gil_scoped_acquire acquire;
         if(py::hasattr(*pyObject, "handle_spike"))
         {
-            try {
-                pyObject->attr("handle_spike")
-                    (sourceNodeId, electrodeName.toRawUTF8(), numChans, numSamples, sampleNum, sortedId, spikeData);
-            }
-            catch (py::error_already_set& e) {
-                handlePythonException("Python Exception!", "Error when handling spike in Python:", e);
-            }
+            pyObject->attr("handle_spike")
+                (sourceNodeId, electrodeName.toRawUTF8(), numChans, numSamples, sampleNum, sortedId, spikeData);
         }
     }
 }
