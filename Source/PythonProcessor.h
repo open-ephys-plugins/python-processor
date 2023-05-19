@@ -106,10 +106,10 @@ public:
 	// 	the plugin's process() method */
 	void handleTTLEvent(TTLEventPtr event) override;
 
-	// /** Handles spikes received by the processor
-	// 	Called automatically for each received spike whenever checkForEvents(true) is called from
-	// 	the plugin's process() method */
-	// void handleSpike(SpikePtr spike) override;
+	/** Handles spikes received by the processor
+		Called automatically for each received spike whenever checkForEvents(true) is called from
+		the plugin's process() method */
+	void handleSpike(SpikePtr spike) override;
 
 	// /** Handles broadcast messages sent during acquisition
 	// 	Called automatically whenever a broadcast message is sent through the signal chain */

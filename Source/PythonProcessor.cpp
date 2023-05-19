@@ -25,7 +25,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <filesystem>
 
 #include "PythonProcessor.h"
-#include "PythonProcessorEditor.h"
 
 namespace py = pybind11;
 
@@ -38,8 +37,8 @@ PYBIND11_EMBEDDED_MODULE(oe_pyprocessor, module){
 PythonProcessor::PythonProcessor()
     : GenericProcessor("Python Processor")
 {
-    pyModule = NULL;
-    pyObject = NULL;
+    pyModule = nullptr;
+    pyObject = nullptr;
     moduleReady = false;
     scriptPath = "";
     moduleName = "";
@@ -58,8 +57,6 @@ PythonProcessor::~PythonProcessor()
     if(Py_IsInitialized() > 0)
     {
         {
-            delete pyModule;
-            delete pyObject;
             py::gil_scoped_release release;
         }
         py::finalize_interpreter();
@@ -203,16 +200,41 @@ void PythonProcessor::handleTTLEvent(TTLEventPtr event)
 }
 
 
-// void PythonProcessor::handleSpike(SpikePtr event)
-// {
-//     // py::gil_scoped_acquire acquire;
-//     try {
-//         pyObject->attr("handle_spike_event")();
-//     }
-//     catch (py::error_already_set& e) {
-//         handlePythonException(e);
-//     }
-// }
+void PythonProcessor::handleSpike(SpikePtr spike)
+{
+    if (spike->getStreamId() == currentStream)
+    {
+        auto spikeChanInfo = spike->getChannelInfo();
+
+        const int sourceNodeId = spikeChanInfo->getSourceNodeId();
+        const String electrodeName = spikeChanInfo->getName();
+        const int numChans = spikeChanInfo->getNumChannels();
+        const int64 sampleNum = spike->getSampleNumber();
+        const uint16 sortedId = spike->getSortedId();
+        const int numSamples = spikeChanInfo->getTotalSamples();
+
+        py::array_t<float> spikeData = py::array_t<float>({ numChans, numSamples });
+
+        for (int i = 0; i < numChans; ++i) 
+        {
+            const float* spikeChanDataPtr = spike->getDataPointer(i);
+            float* numpyChannelPtr = spikeData.mutable_data(i, 0);
+            memcpy(numpyChannelPtr, spikeChanDataPtr, sizeof(float) * numSamples);
+        }
+
+        // py::gil_scoped_acquire acquire;
+        if(py::hasattr(*pyObject, "handle_spike"))
+        {
+            try {
+                pyObject->attr("handle_spike")
+                    (sourceNodeId, electrodeName.toRawUTF8(), numChans, numSamples, sampleNum, sortedId, spikeData);
+            }
+            catch (py::error_already_set& e) {
+                handlePythonException(e);
+            }
+        }
+    }
+}
 
 
 // void PythonProcessor::handleBroadcastMessage(String message)
@@ -249,52 +271,67 @@ bool PythonProcessor::startAcquisition()
     {
         // py::gil_scoped_acquire acquire;
 
-        try {
-            pyObject->attr("start_acquisition")();
-        }
-        catch (py::error_already_set& e) {
-            handlePythonException(e);
+        if(py::hasattr(*pyObject, "start_acquisition"))
+        {
+            try {
+                pyObject->attr("start_acquisition")();
+            }
+            catch (py::error_already_set& e) {
+                handlePythonException(e);
+            }
         }
         return true;
     }
     return false;
 }
 
-bool PythonProcessor::stopAcquisition() {
+bool PythonProcessor::stopAcquisition()
+{
     if (moduleReady)
     {
         // py::gil_scoped_acquire acquire;
-        try {
-            pyObject->attr("stop_acquisition")();
-        }
-        catch (py::error_already_set& e) {
-            handlePythonException(e);
+        if(py::hasattr(*pyObject, "stop_acquisition"))
+        {
+            try {
+                pyObject->attr("stop_acquisition")();
+            }
+            catch (py::error_already_set& e) {
+                handlePythonException(e);
+            }
         }
     }
     return true;
 }
 
-void PythonProcessor::startRecording() {
+void PythonProcessor::startRecording() 
+{
     String recordingDirectory = CoreServices::getRecordingDirectoryName();
 
     // py::gil_scoped_acquire acquire;
-    try {
-        pyObject->attr("start_recording")(recordingDirectory.toRawUTF8());
-    }
-    catch (py::error_already_set& e) {
-        handlePythonException(e);
+    if(moduleReady && py::hasattr(*pyObject, "start_recording"))
+    {
+        try {
+            pyObject->attr("start_recording")(recordingDirectory.toRawUTF8());
+        }
+        catch (py::error_already_set& e) {
+            handlePythonException(e);
+        }
     }
 }
 
 
 
-void PythonProcessor::stopRecording() {
+void PythonProcessor::stopRecording() 
+{
     // py::gil_scoped_acquire acquire;
-    try {
-        pyObject->attr("stop_recording")();
-    }
-    catch (py::error_already_set& e) {
-        handlePythonException(e);
+    if(moduleReady && py::hasattr(*pyObject, "stop_recording"))
+    {
+        try {
+            pyObject->attr("stop_recording")();
+        }
+        catch (py::error_already_set& e) {
+            handlePythonException(e);
+        }
     }
 }
 

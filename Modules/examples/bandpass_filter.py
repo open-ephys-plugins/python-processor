@@ -70,25 +70,15 @@ class PyProcessor:
         pass
     
     def handle_ttl_event(self, source_node, channel, sample_number, line, state):
-        """
-        Handle each incoming ttl event.
-        
-        Parameters:
-        source_node (int): id of the processor this event was generated from
-        channel (str): name of the event channel
-        sample_number (int): sample number of the event
-        line (int): the line on which event was generated (0-255) 
-        state (bool): event state true (ON) or false (OFF)
-        """
+        """ Handle each incoming ttl event """
+        pass
+
+    def handle_spike(self, source_node, electrode_name, num_channels, num_samples, sample_number, sorted_id, spike_data):
+        """ Handle each incoming spike """
         pass
 
     def start_recording(self, recording_dir):
-        """ 
-        Called when recording starts
-
-        Parameters:
-        recording_dir - recording directory to be used by future record nodes.
-        """
+        """ Called when recording starts """
         pass
     
     def stop_recording(self):
