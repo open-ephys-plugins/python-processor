@@ -148,7 +148,7 @@ public:
 	void initModule();
 
 	/** Deals with python exceptions (print and turn off module for now) */
-	void handlePythonException(py::error_already_set e);
+	void handlePythonException(const String& title, const String& msg, py::error_already_set e);
 
 };
 

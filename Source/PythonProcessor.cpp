@@ -107,8 +107,7 @@ void PythonProcessor::initialize(bool signalChainIsLoading)
     if(!signalChainIsLoading
        && Py_IsInitialized() == 0)
     {
-        if( !initInterpreter() )
-            LOGE("Unable to initialize python interpreter!!");
+        initInterpreter();
     }
 }
 
@@ -194,7 +193,7 @@ void PythonProcessor::handleTTLEvent(TTLEventPtr event)
             pyObject->attr("handle_ttl_event")(sourceNodeId, channelName.toRawUTF8(), sampleNumber, line, state);
         }
         catch (py::error_already_set& e) {
-            handlePythonException(e);
+            handlePythonException("Python Exception!", "Error when handling ttl event in Python:", e);
         }
     }
 }
@@ -230,7 +229,7 @@ void PythonProcessor::handleSpike(SpikePtr spike)
                     (sourceNodeId, electrodeName.toRawUTF8(), numChans, numSamples, sampleNum, sortedId, spikeData);
             }
             catch (py::error_already_set& e) {
-                handlePythonException(e);
+                handlePythonException("Python Exception!", "Error when handling spike in Python:", e);
             }
         }
     }
@@ -277,7 +276,7 @@ bool PythonProcessor::startAcquisition()
                 pyObject->attr("start_acquisition")();
             }
             catch (py::error_already_set& e) {
-                handlePythonException(e);
+                handlePythonException("Python Exception!", "Error when starting acquisition in Python:", e);
             }
         }
         return true;
@@ -296,7 +295,7 @@ bool PythonProcessor::stopAcquisition()
                 pyObject->attr("stop_acquisition")();
             }
             catch (py::error_already_set& e) {
-                handlePythonException(e);
+                handlePythonException("Python Exception!", "Error when stopping acquisition in Python:", e);
             }
         }
     }
@@ -314,7 +313,7 @@ void PythonProcessor::startRecording()
             pyObject->attr("start_recording")(recordingDirectory.toRawUTF8());
         }
         catch (py::error_already_set& e) {
-            handlePythonException(e);
+            handlePythonException("Python Exception!", "Error when starting recording in Python:", e);
         }
     }
 }
@@ -330,7 +329,7 @@ void PythonProcessor::stopRecording()
             pyObject->attr("stop_recording")();
         }
         catch (py::error_already_set& e) {
-            handlePythonException(e);
+            handlePythonException("Python Exception!", "Error when stopping recording in Python:", e);
         }
     }
 }
@@ -447,8 +446,6 @@ bool PythonProcessor::initInterpreter(String pythonHome)
 
             if(Py_IsInitialized() > 0)
             {
-                LOGC("Python Interpreter initialized successfully! Python Home: ", String(Py_GetPythonHome()));
-
                 #if JUCE_WINDOWS
                     py::module_ os = py::module_::import("os");
                     os.attr("add_dll_directory")
@@ -464,13 +461,14 @@ bool PythonProcessor::initInterpreter(String pythonHome)
                 LOGD(p.cast<std::string>());
             }
         }
-
+        LOGC("Python Interpreter initialized successfully! Python Home: ", String(Py_GetPythonHome()));
         return true;
     }
-    catch(std::exception& e)
+    catch(py::error_already_set& e)
     {   
-        PyErr_Print();
-        LOGE(e.what());
+        String errText = "Unable to initialize Python Interpreter!";
+        LOGE(errText);
+        handlePythonException(errText, "", e);
         return false;
     }
 }
@@ -515,13 +513,12 @@ bool PythonProcessor::importModule()
         return true;
     }
 
-    catch (std::exception& exc)
+    catch (py::error_already_set& e)
     {
-        LOGC("Failed to import Python module.");
-        LOGC(exc.what());
+        String errText = "Failed to import Python module " + moduleName;
+        LOGE(errText);
+        handlePythonException("Import Failed!", errText, e);
 
-        editorPtr->setPathLabelText("No Module Loaded");
-        moduleReady = false;
         return false;
     }
 }
@@ -538,7 +535,7 @@ void PythonProcessor::reload()
             pyModule->reload();
         }
         catch (py::error_already_set& e) {
-            handlePythonException(e);
+            handlePythonException("Reloding failed!", "", e);
             return;
         }
         
@@ -582,20 +579,41 @@ void PythonProcessor::initModule()
             pyObject = new py::object(pyModule->attr("PyProcessor")(this, numChans, sampleRate));
         }
 
-        catch (std::exception& exc)
+        catch (py::error_already_set& e)
         {
-            LOGC("Failed to initialize Python module.");
-            LOGC(exc.what());
-
-            editorPtr->setPathLabelText("(ERROR) " + moduleName);
-            moduleReady = false;
+            String errText = "Failed to initialize Python module " + moduleName;
+            LOGE(errText);
+            handlePythonException("Python Exception!", errText, e);
         }
     }
 }
 
-void PythonProcessor::handlePythonException(py::error_already_set e)
+void PythonProcessor::handlePythonException(const String& title, const String& msg, py::error_already_set e)
 {
-    LOGE("Python Exception:", e.what());
+    LOGE("Python Exception:\n", e.what());
+
+    TextEditor* customMsgBox = new TextEditor();
+    customMsgBox->setReadOnly(true);
+    customMsgBox->setMultiLine(true);
+    customMsgBox->setFont(Font("Fira Code", "Regular", 14.0f));
+    customMsgBox->setSize(400, 300);
+    customMsgBox->setText(String(e.what()));
+
+    int textHeight = customMsgBox->getTextHeight();
+
+    if(textHeight < 300)
+        customMsgBox->setSize(400, textHeight + 10);
+
+    AlertWindow exceptionWindow(title,
+                                msg,
+                                AlertWindow::WarningIcon);
+
+    KeyPress dismissKey(KeyPress::returnKey, 0, 0);
+    exceptionWindow.addButton("OK", 1, dismissKey);
+    exceptionWindow.addCustomComponent(customMsgBox);
+
+    exceptionWindow.runModalLoop();
+
     moduleReady = false;
     editorPtr->setPathLabelText("(ERROR) " + moduleName);
 }
