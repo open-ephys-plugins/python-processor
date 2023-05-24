@@ -2,8 +2,7 @@
 
 ![Python Processor Editor](https://open-ephys.github.io/gui-docs/_images/pythonprocessor-01.png)
 
-A plugin for running custom Python scripts in a [Open Ephys GUI](https://github.com/open-ephys/plugin-GUI) signal chain. 
-
+Modifies incoming continuous data and handles events and spikes using custom code written in Python.
 ## Installation
 
 The Python Processor plugin is not included by default in the Open Ephys GUI. To install, use ctrl-P to access the Plugin Installer, browse to the "Processor plugin" plugin, and click the "Install" button.
