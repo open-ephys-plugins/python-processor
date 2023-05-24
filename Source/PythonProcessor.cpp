@@ -457,6 +457,7 @@ bool PythonProcessor::initInterpreter(String pythonHome)
             }
         }
         LOGC("Python Interpreter initialized successfully! Python Home: ", String(Py_GetPythonHome()));
+        CoreServices::sendStatusMessage("Python Home: " + String(Py_GetPythonHome()));
         return true;
     }
     catch(py::error_already_set& e)
@@ -505,7 +506,7 @@ bool PythonProcessor::importModule()
 
         LOGC("Successfully imported ", moduleName);
 
-        editorPtr->setPathLabelText(moduleName);
+        editorPtr->setPathLabelText(moduleName, scriptPath);
         moduleReady = true;
         MouseCursor::hideWaitCursor();
         return true;
@@ -533,13 +534,13 @@ void PythonProcessor::reload()
             pyModule->reload();
         }
         catch (py::error_already_set& e) {
-            handlePythonException("Reloding failed!", "", e);
+            handlePythonException("Reloading failed!", "", e);
             return;
         }
         
         LOGC("Module successfully reloaded");
         moduleReady = true;
-        editorPtr->setPathLabelText(moduleName);
+        editorPtr->setPathLabelText(moduleName, scriptPath);
         initModule();
     }
     else 
@@ -613,5 +614,5 @@ void PythonProcessor::handlePythonException(const String& title, const String& m
     exceptionWindow.runModalLoop();
 
     moduleReady = false;
-    editorPtr->setPathLabelText("(ERROR) " + moduleName);
+    editorPtr->setPathLabelText("(ERROR) " + moduleName, scriptPath);
 }

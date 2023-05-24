@@ -82,8 +82,8 @@ public:
 	/** Called when a ComboBox changes*/
 	void comboBoxChanged(ComboBox* comboBox) override;
 
-	/** Sets the text of the path label */
-	void setPathLabelText(String);
+	/** Sets the text & tooltip of the path label */
+	void setPathLabelText(String text, String tooltip);
 
 private:
 

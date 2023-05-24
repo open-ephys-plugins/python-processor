@@ -148,10 +148,10 @@ void PythonProcessorEditor::comboBoxChanged(ComboBox* cb)
 }
 
 
-void PythonProcessorEditor::setPathLabelText(String s)
+void PythonProcessorEditor::setPathLabelText(String text, String tooltip)
 {
-	scriptPathLabel->setText(s, dontSendNotification);
-	scriptPathLabel->setTooltip(s);
+	scriptPathLabel->setText(text, dontSendNotification);
+	scriptPathLabel->setTooltip(tooltip);
 }
 
 
