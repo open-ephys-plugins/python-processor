@@ -478,6 +478,8 @@ bool PythonProcessor::importModule()
 
     LOGC("Importing Python module from ", scriptPath.toRawUTF8());
 
+    MouseCursor::showWaitCursor();
+
     try
     {
         // Clear for new class
@@ -505,6 +507,7 @@ bool PythonProcessor::importModule()
 
         editorPtr->setPathLabelText(moduleName);
         moduleReady = true;
+        MouseCursor::hideWaitCursor();
         return true;
     }
 
@@ -513,7 +516,7 @@ bool PythonProcessor::importModule()
         String errText = "Failed to import Python module " + moduleName;
         LOGE(errText);
         handlePythonException("Import Failed!", errText, e);
-
+        MouseCursor::hideWaitCursor();
         return false;
     }
 }

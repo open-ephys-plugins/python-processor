@@ -101,9 +101,9 @@ public:
 		Visualizer plugins typically use this method to send data to the canvas for display purposes */
 	void process(AudioBuffer<float>& buffer) override;
 
-	// /** Handles events received by the processor
-	// 	Called automatically for each received event whenever checkForEvents() is called from
-	// 	the plugin's process() method */
+	/** Handles events received by the processor
+		Called automatically for each received event whenever checkForEvents() is called from
+		the plugin's process() method */
 	void handleTTLEvent(TTLEventPtr event) override;
 
 	/** Handles spikes received by the processor
@@ -115,6 +115,7 @@ public:
 	// 	Called automatically whenever a broadcast message is sent through the signal chain */
 	// void handleBroadcastMessage(String message) override;
 
+	/**Add events from python to C++. Bound to Python as an embedded module*/
 	void addPythonEvent(int line, bool state);
 
 	void triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum);
