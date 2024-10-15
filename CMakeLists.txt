@@ -99,7 +99,7 @@ endforeach()
 option(COPY_PYTHON_DL "Creates a directory and copies the python dynamic library for packaging" OFF)
 
 # Find and link python and pybind11
-find_package(Python 3.8 COMPONENTS Interpreter Development REQUIRED)
+find_package(Python 3.10 COMPONENTS Interpreter Development REQUIRED)
 add_subdirectory(extern/pybind11)
 target_link_libraries(${PLUGIN_NAME} PRIVATE pybind11::embed)
 

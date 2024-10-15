@@ -29,11 +29,9 @@ jobs:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: latest-stable
-    - uses: conda-incubator/setup-miniconda@v3
+    - uses: actions/setup-python@v5
       with:
-        activate-environment: oe-python-plugin
-        python-version: "3.10"
-        auto-activate-base: false
+        python-version: '3.10'
     - name: setup
       run: |
         cd ../..
