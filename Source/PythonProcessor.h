@@ -84,6 +84,9 @@ public:
 	/** The class destructor, used to deallocate memory */
 	~PythonProcessor();
 
+	/** Registers the parameters of the processor */
+	void registerParameters() override;
+
 	/** If the processor has a custom editor, this method must be defined to instantiate it. */
 	AudioProcessorEditor* createEditor() override;
 

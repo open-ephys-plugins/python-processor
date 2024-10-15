@@ -55,11 +55,8 @@ class PyProcessor:
         Parameters:
         data - numpy array.
         """
-        try:
-            for i in range(self.num_chans):
-                data[i] = butter_bandpass_filter(self.sos[i], data[i])
-        except:
-            pass
+        for i in range(self.num_chans):
+            data[i] = butter_bandpass_filter(self.sos[i], data[i])
         
     def start_acquisition(self):
         """ Called at start of acquisition """

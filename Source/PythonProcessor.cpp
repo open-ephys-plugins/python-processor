@@ -44,12 +44,6 @@ PythonProcessor::PythonProcessor()
     moduleName = "";
     editorPtr = NULL;
     currentStream = 0;
-
-    addStringParameter(Parameter::GLOBAL_SCOPE, "python_home", "Path to python home", String());
-    addStringParameter(Parameter::GLOBAL_SCOPE, "script_path", "Path to python script", String(), true);
-    addIntParameter(Parameter::GLOBAL_SCOPE,
-        "current_stream", "Currently selected stream",
-        0, 0, 200000);
 }
 
 PythonProcessor::~PythonProcessor()
@@ -65,6 +59,12 @@ PythonProcessor::~PythonProcessor()
     }
 }
 
+void PythonProcessor::registerParameters()
+{
+    addStringParameter(Parameter::PROCESSOR_SCOPE, "python_home", "Python Home", "Path to python home", String());
+    addStringParameter(Parameter::PROCESSOR_SCOPE, "script_path", "Script Path", "Path to python script", String(), true);
+    addSelectedStreamParameter(Parameter::PROCESSOR_SCOPE, "current_stream", "Stream", "Currently selected stream", {}, 0, true, true);
+}
 
 AudioProcessorEditor* PythonProcessor::createEditor()
 {
@@ -96,7 +96,7 @@ void PythonProcessor::updateSettings()
         };
 
         ttlChan = new EventChannel(ttlChannelSettings);
-        ttlChan->addProcessor(processorInfo.get());
+        ttlChan->addProcessor(this);
         eventChannels.add(ttlChan);
 
         localEventChannels[streamId] = eventChannels.getLast();
@@ -363,7 +363,8 @@ void PythonProcessor::parameterValueChanged(Parameter* param)
     }
     else if (param->getName().equalsIgnoreCase("current_stream"))
     {
-        uint16 candidateStream = (uint16) (int) param->getValue();
+        String streamKey = param->getValueAsString();
+        uint16 candidateStream = getDataStream(streamKey)->getStreamId();
 
         if(streamExists(candidateStream)
            && currentStream != candidateStream)
@@ -392,7 +393,7 @@ bool PythonProcessor::initInterpreter(String pythonHome)
         AlertWindow::showMessageBox (AlertWindow::InfoIcon,
                                     "Select Python Home path",
                                     "To use the plugin you need provide the path to your preferred Python installation. "
-                                    "Please select the folder where your python is located in the next step.");
+                                    "Please select the folder where your python environment is located in the next step.");
                                     
         FileChooser chooser ("Please select the path to your preferred Python installation",
                             { File::getSpecialLocation(File::userHomeDirectory) });
@@ -594,7 +595,7 @@ void PythonProcessor::handlePythonException(const String& title, const String& m
     TextEditor* customMsgBox = new TextEditor();
     customMsgBox->setReadOnly(true);
     customMsgBox->setMultiLine(true);
-    customMsgBox->setFont(Font("Fira Code", "Regular", 14.0f));
+    customMsgBox->setFont(FontOptions(14.0f));
     customMsgBox->setSize(400, 300);
     customMsgBox->setText(String(e.what()));
 

@@ -56,8 +56,7 @@ private:
 
 class PythonProcessorEditor :
 	public GenericEditor,
-	public Button::Listener,
-	public ComboBox::Listener
+	public Button::Listener
 {
 public:
 
@@ -66,9 +65,6 @@ public:
 
 	/** Destructor */
 	~PythonProcessorEditor() { }
-
-	/** Called when underlying settings are updated */
-	void updateSettings() override;
 
 	/** Called just prior to the start of acquisition, to allow custom commands. */
 	void startAcquisition() override;
@@ -79,9 +75,6 @@ public:
 	/** Respond to button clicks*/
 	void buttonClicked(Button* button) override;
 
-	/** Called when a ComboBox changes*/
-	void comboBoxChanged(ComboBox* comboBox) override;
-
 	/** Sets the text & tooltip of the path label */
 	void setPathLabelText(String text, String tooltip);
 
@@ -89,10 +82,9 @@ private:
 
 	PythonProcessor* pythonProcessor;
 
-	std::unique_ptr<Label> scriptPathLabel;
+	std::unique_ptr<TextEditor> scriptPathLabel;
 	std::unique_ptr<Button> scriptPathButton;
-	std::unique_ptr<Button> reloadButton;
-	std::unique_ptr<ComboBox> streamSelection;
+	std::unique_ptr<UtilityButton> reloadButton;
 
 	uint16 currentStream = 0;
 
