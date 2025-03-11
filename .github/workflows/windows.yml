@@ -41,7 +41,7 @@ jobs:
         cd plugin-GUI/Build
         cmake -G "Visual Studio 17 2022" -A x64 .. 
         mkdir Release && cd Release
-        curl -L https://openephysgui.jfrog.io/artifactory/Libraries/open-ephys-lib-$GUI_LIB_VERSION.zip --output open-ephys-lib.zip 
+        curl -L https://openephys.jfrog.io/artifactory/GUI-binaries/Libraries/open-ephys-lib-$GUI_LIB_VERSION.zip --output open-ephys-lib.zip 
         unzip open-ephys-lib.zip
       shell: bash
     - name: configure
@@ -82,7 +82,7 @@ jobs:
     - name: deploy
       if: github.ref == 'refs/heads/testing-juce8'
       env:
-        artifactoryApiKey: ${{ secrets.artifactoryApiKey }}
+        secrets.ARTIFACTORY_ACCESS_TOKEN: ${{ secrets.secrets.ARTIFACTORY_ACCESS_TOKEN }}
       run: |
-        curl -H "X-JFrog-Art-Api:$artifactoryApiKey" -T ${{ env.zipfile }} "https://openephys.jfrog.io/artifactory/PythonProcessor-plugin/windows/${{ env.zipfile }}"
+        curl -H "X-JFrog-Art-Api:$secrets.ARTIFACTORY_ACCESS_TOKEN" -T ${{ env.zipfile }} "https://openephys.jfrog.io/artifactory/PythonProcessor-plugin/windows/${{ env.zipfile }}"
       shell: bash
