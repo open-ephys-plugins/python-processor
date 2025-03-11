@@ -31,7 +31,7 @@ jobs:
         xcode-version: latest-stable
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.12'
     - name: setup
       run: |
         cd ../..
@@ -40,7 +40,7 @@ jobs:
     - name: build
       run: |
         cd Build
-        cmake -G "Xcode" -DPython_ROOT_DIR="$CONDA/envs/oe-python-plugin" -DCOPY_PYTHON_DL=ON ..
+        cmake -G "Xcode" -DPython_ROOT_DIR="${{ env.pythonLocation }}" -DCOPY_PYTHON_DL=ON ..
         xcodebuild -configuration Release
 #    - name: test
 #      run: cd build && ctest
@@ -108,7 +108,7 @@ jobs:
         zipfile=${package}_${new_plugin_ver}.zip
         echo "zipfile=${zipfile}" >> $GITHUB_ENV
         zip -r -X $zipfile plugins shared
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: ${{ env.zipfile }}
         path: ${{ env.zipfile }}

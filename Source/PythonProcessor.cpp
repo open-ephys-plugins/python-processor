@@ -364,7 +364,11 @@ void PythonProcessor::parameterValueChanged(Parameter* param)
     else if (param->getName().equalsIgnoreCase("current_stream"))
     {
         String streamKey = param->getValueAsString();
-        uint16 candidateStream = getDataStream(streamKey)->getStreamId();
+        uint16 candidateStream = 0;
+        if (auto *stream = getDataStream(streamKey))
+        {
+            candidateStream = stream->getStreamId();
+        }
 
         if(streamExists(candidateStream)
            && currentStream != candidateStream)
