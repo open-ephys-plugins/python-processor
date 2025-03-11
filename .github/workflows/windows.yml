@@ -29,11 +29,9 @@ jobs:
           exit 1
         fi
       shell: bash
-    - uses: conda-incubator/setup-miniconda@v3
+    - uses: actions/setup-python@v5
       with:
-        activate-environment: oe-python-plugin
-        python-version: "3.10"
-        auto-activate-base: false
+        python-version: '3.12'
     - name: setup
       run: |
         cd ../..
@@ -47,10 +45,10 @@ jobs:
     - name: configure
       run: |
         cd Build
-        cmake -G "Visual Studio 17 2022" -A x64 -DPython_ROOT_DIR="$CONDA/envs/oe-python-plugin" -DCOPY_PYTHON_DL=ON .. 
+        cmake -G "Visual Studio 17 2022" -A x64 -DCOPY_PYTHON_DL=ON .. 
       shell: bash
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.1
+      uses: microsoft/setup-msbuild@v2
     - name: build-plugin
       run: |
         cd Build
@@ -75,7 +73,7 @@ jobs:
         powershell Compress-Archive -Path "plugins" -DestinationPath ${zipfile}
         powershell Compress-Archive -U -Path "shared" -DestinationPath ${zipfile}
       shell: bash
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: ${{ env.zipfile }}
         path: ${{ env.zipfile }}

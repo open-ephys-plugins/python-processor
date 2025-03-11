@@ -26,11 +26,9 @@ jobs:
             echo "Invalid branch : ${{github.ref_name}}"
             exit 1
           fi
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/setup-python@v5
         with:
-          activate-environment: oe-python-plugin
-          python-version: "3.10"
-          auto-activate-base: false
+          python-version: '3.12'
       - name: setup
         run: |
           sudo apt update
@@ -42,7 +40,7 @@ jobs:
         run: |
           conda env list
           cd Build
-          cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DPython_ROOT_DIR="$CONDA/envs/oe-python-plugin" -DCOPY_PYTHON_DL=ON ..
+          cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCOPY_PYTHON_DL=ON ..
           make
   #    - name: test
   #      run: cd build && ctest
@@ -60,7 +58,7 @@ jobs:
           zipfile=${package}_${new_plugin_ver}.zip
           echo "zipfile=${zipfile}" >> $GITHUB_ENV
           zip -r -X $zipfile plugins shared
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.zipfile }}
           path: ${{ env.zipfile }}
