@@ -53,7 +53,7 @@ PythonProcessor::~PythonProcessor()
         {
             delete pyModule;
             delete pyObject;
-            py::gil_scoped_release release;
+            // py::gil_scoped_release release;
         }
         py::finalize_interpreter();
     }
@@ -125,7 +125,8 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
     for (auto stream : getDataStreams())
     {
 
-        if (stream->getStreamId() == currentStream)
+        if (stream->getStreamId() == currentStream
+            && (*stream)["enable_stream"])
         {
             const uint16 streamId = stream->getStreamId();
 
@@ -150,8 +151,7 @@ void PythonProcessor::process(AudioBuffer<float>& buffer)
                 // Call python script on this block
                 pyObject->attr("process")(numpyArray);
 
-
-                // // Write back from numpy array
+                // Write back from numpy array
                 for (int i = 0; i < numChannels; ++i) {
                     int globalChannelIndex = getGlobalChannelIndex(stream->getStreamId(), i);
 
@@ -424,25 +424,25 @@ bool PythonProcessor::initInterpreter(String pythonHome)
     try
     {
         getParameter("python_home")->currentValue = targetFolder.getFullPathName();
-        Py_SetPythonHome(targetFolder.getFullPathName().toWideCharPointer());
 
-        String pythonPaths = String();
-
-    #if JUCE_WINDOWS
-        pythonPaths = targetFolder.getFullPathName()
-                        + ";"
-                        + targetFolder.getChildFile("lib").getFullPathName()
-                        + ";"
-                        + targetFolder.getChildFile("lib/site-packages").getFullPathName()
-                        + ";"
-                        + targetFolder.getChildFile("DLLs").getFullPathName();
+        // Use PyConfig instead of direct Py_SetPythonHome/Py_SetPath calls
+        PyConfig config;
+        PyStatus status;
         
-        Py_SetPath(pythonPaths.toWideCharPointer());
-    #endif
+        PyConfig_InitPythonConfig(&config);
+        
+        // Set Python home
+        status = PyConfig_SetString(&config, &config.home, 
+                                   targetFolder.getFullPathName().toWideCharPointer());
+        if (PyStatus_Exception(status)) {
+            PyConfig_Clear(&config);
+            throw std::runtime_error("Failed to set Python home");
+        }
 
-        py::initialize_interpreter();
+        // Initialize with PyConfig
+        py::initialize_interpreter(&config);
         {
-            py::gil_scoped_acquire acquire;
+            // py::gil_scoped_acquire acquire;
 
             if(Py_IsInitialized() > 0)
             {
@@ -470,6 +470,12 @@ bool PythonProcessor::initInterpreter(String pythonHome)
         String errText = "Unable to initialize Python Interpreter!";
         LOGE(errText);
         handlePythonException(errText, "", e);
+        return false;
+    }
+    catch(const std::runtime_error& e)
+    {
+        String errText = "Python configuration error: " + String(e.what());
+        LOGE(errText);
         return false;
     }
 }
@@ -596,7 +602,7 @@ void PythonProcessor::handlePythonException(const String& title, const String& m
 {
     LOGE("Python Exception:\n", e.what());
 
-    TextEditor* customMsgBox = new TextEditor();
+    std::unique_ptr<TextEditor> customMsgBox = std::make_unique<TextEditor>();
     customMsgBox->setReadOnly(true);
     customMsgBox->setMultiLine(true);
     customMsgBox->setFont(FontOptions(14.0f));
@@ -613,8 +619,8 @@ void PythonProcessor::handlePythonException(const String& title, const String& m
                                 AlertWindow::WarningIcon);
 
     KeyPress dismissKey(KeyPress::returnKey, 0, 0);
-    exceptionWindow.addButton("OK", 1, dismissKey);
-    exceptionWindow.addCustomComponent(customMsgBox);
+    exceptionWindow.addButton("OK", 0, dismissKey);
+    exceptionWindow.addCustomComponent(customMsgBox.get());
 
     exceptionWindow.runModalLoop();
 
