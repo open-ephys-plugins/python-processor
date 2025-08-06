@@ -20,8 +20,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-
+#if JUCE_LINUX
+#include <dlfcn.h>
+#endif
 #include <filesystem>
 
 #include "PythonProcessor.h"
@@ -438,6 +439,14 @@ bool PythonProcessor::initInterpreter(String pythonHome)
             PyConfig_Clear(&config);
             throw std::runtime_error("Failed to set Python home");
         }
+
+#if JUCE_LINUX
+        // Try to open libpython with RTLD_GLOBAL
+        void* handle = dlopen("libpython3.10.so.1.0", RTLD_NOW | RTLD_GLOBAL);
+        if (!handle) {
+            LOGE("Could not dlopen libpython3.10.so.1.0: ", dlerror());
+        }
+#endif
 
         // Initialize with PyConfig
         py::initialize_interpreter(&config);
