@@ -20,7 +20,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if JUCE_LINUX
+#if defined (LINUX) || defined (__linux__)
 #include <dlfcn.h>
 #endif
 #include <filesystem>
