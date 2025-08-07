@@ -34,6 +34,7 @@ jobs:
         cd Build
         cmake -G "Xcode" -DCOPY_PYTHON_DL=ON ..
         xcodebuild -configuration Release
+        install_name_tool -change /Library/Frameworks/Python.framework/Versions/3.10/Python @rpath/libpython3.10.dylib Release/python-processor.bundle/Contents/MacOS/python-processor
 #    - name: test
 #      run: cd build && ctest
     - name: package
