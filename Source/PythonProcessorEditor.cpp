@@ -23,94 +23,84 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "PythonProcessorEditor.h"
 #include "PythonProcessor.h"
 
-ScriptPathButton::ScriptPathButton(Parameter* param) : ParameterEditor(param)
+ScriptPathButton::ScriptPathButton (Parameter* param) : ParameterEditor (param)
 {
-	utilButton = std::make_unique<UtilityButton>("...");
-	utilButton->setFont (FontOptions (12.0f));
-	utilButton->addListener(this);
-	addAndMakeVisible(utilButton.get());
+    utilButton = std::make_unique<UtilityButton> ("...");
+    utilButton->setFont (FontOptions (12.0f));
+    utilButton->addListener (this);
+    addAndMakeVisible (utilButton.get());
 
-	setBounds(0, 0, 20, 20);
+    setBounds (0, 0, 20, 20);
 }
 
-
-void ScriptPathButton::buttonClicked(Button* label)
+void ScriptPathButton::buttonClicked (Button* label)
 {
-	FileChooser chooseScriptDirectory("Please select a python script...", File(), "*.py");
+    FileChooser chooseScriptDirectory ("Please select a python script...", File(), "*.py");
 
-	if (chooseScriptDirectory.browseForFileToOpen())
-	{
-		param->setNextValue(chooseScriptDirectory.getResult().getFullPathName());
-	}
+    if (chooseScriptDirectory.browseForFileToOpen())
+    {
+        param->setNextValue (chooseScriptDirectory.getResult().getFullPathName());
+    }
 }
 
 void ScriptPathButton::resized()
 {
-	utilButton->setBounds(0, 0, 20, 20);
-
+    utilButton->setBounds (0, 0, 20, 20);
 }
 
-
-
-PythonProcessorEditor::PythonProcessorEditor(PythonProcessor* parentNode) 
-    : GenericEditor(parentNode)
+PythonProcessorEditor::PythonProcessorEditor (PythonProcessor* parentNode)
+    : GenericEditor (parentNode)
 {
-	// Set ptr to parent
-	pythonProcessor = parentNode;
+    // Set ptr to parent
+    pythonProcessor = parentNode;
 
     desiredWidth = 190;
 
-	addSelectedStreamParameterEditor(Parameter::PROCESSOR_SCOPE, "current_stream", 20, 34);
-	getParameterEditor("current_stream")->setLayout(ParameterEditor::Layout::nameHidden);
-	getParameterEditor("current_stream")->setSize(150, 20);
+    addSelectedStreamParameterEditor (Parameter::PROCESSOR_SCOPE, "current_stream", 20, 34);
+    getParameterEditor ("current_stream")->setLayout (ParameterEditor::Layout::nameHidden);
+    getParameterEditor ("current_stream")->setSize (150, 20);
 
+    scriptPathLabel = std::make_unique<TextEditor> ("Script Path Label");
+    scriptPathLabel->setText ("No Module Loaded", false);
+    scriptPathLabel->setTooltip (scriptPathLabel->getText());
+    scriptPathLabel->setMultiLine (false);
+    scriptPathLabel->setReadOnly (true);
+    scriptPathLabel->setCaretVisible (false);
+    scriptPathLabel->setBounds (20, 65, 125, 20);
+    scriptPathLabel->setJustification (Justification::centredLeft);
+    addAndMakeVisible (scriptPathLabel.get());
 
-	scriptPathLabel = std::make_unique<TextEditor>("Script Path Label");
-	scriptPathLabel->setText("No Module Loaded", false);
-	scriptPathLabel->setTooltip(scriptPathLabel->getText());
-	scriptPathLabel->setMultiLine(false);
-	scriptPathLabel->setReadOnly(true);
-	scriptPathLabel->setCaretVisible(false);
-	scriptPathLabel->setBounds(20, 65, 125, 20);
-	scriptPathLabel->setJustification(Justification::centredLeft);
-	addAndMakeVisible(scriptPathLabel.get());
+    Parameter* scriptPathPtr = getProcessor()->getParameter ("script_path");
+    addCustomParameterEditor (new ScriptPathButton (scriptPathPtr), 150, 65);
 
-	Parameter* scriptPathPtr = getProcessor()->getParameter("script_path");
-	addCustomParameterEditor(new ScriptPathButton(scriptPathPtr), 150, 65);
-
-	reloadButton = std::make_unique<UtilityButton>("Reload");
-	reloadButton->setFont (FontOptions (13.0f));
-	reloadButton->setBounds(60, 95, 70, 25);
-	reloadButton->addListener(this);
-	addAndMakeVisible(reloadButton.get());
-
+    reloadButton = std::make_unique<UtilityButton> ("Reload");
+    reloadButton->setFont (FontOptions (13.0f));
+    reloadButton->setBounds (60, 95, 70, 25);
+    reloadButton->addListener (this);
+    addAndMakeVisible (reloadButton.get());
 }
 
 void PythonProcessorEditor::startAcquisition()
 {
-	reloadButton->setEnabled(false);
+    reloadButton->setEnabled (false);
 }
 
 void PythonProcessorEditor::stopAcquisition()
 {
-	reloadButton->setEnabled(true);
+    reloadButton->setEnabled (true);
 }
 
-void PythonProcessorEditor::buttonClicked(Button* button)
+void PythonProcessorEditor::buttonClicked (Button* button)
 {
-
-	if (button == reloadButton.get())
-	{
-		pythonProcessor->reload();
-	}
-
+    if (button == reloadButton.get())
+    {
+        pythonProcessor->reload();
+    }
 }
 
-void PythonProcessorEditor::setPathLabelText(String text, String tooltip)
+void PythonProcessorEditor::setPathLabelText (String text, String tooltip)
 {
-	scriptPathLabel->setText(text, false);
-	scriptPathLabel->setTooltip(tooltip);
-	scriptPathLabel->setCaretPosition(0);
+    scriptPathLabel->setText (text, false);
+    scriptPathLabel->setTooltip (tooltip);
+    scriptPathLabel->setCaretPosition (0);
 }
-
-

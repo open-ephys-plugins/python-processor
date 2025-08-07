@@ -29,68 +29,61 @@ class PythonProcessor;
 
 /** Custom parameter editor for changing the script path*/
 class ScriptPathButton : public ParameterEditor,
-	public Button::Listener
+                         public Button::Listener
 {
 public:
+    /** Constructor */
+    ScriptPathButton (Parameter* param);
 
-	/** Constructor */
-	ScriptPathButton(Parameter* param);
+    /** Destructor*/
+    virtual ~ScriptPathButton() {}
 
-	/** Destructor*/
-	virtual ~ScriptPathButton() { }
+    /** Respond to trigger button clicks*/
+    void buttonClicked (Button* label) override;
 
-	/** Respond to trigger button clicks*/
-	void buttonClicked(Button* label) override;
+    /** Update view of the parameter editor component*/
+    void updateView() {};
 
-	/** Update view of the parameter editor component*/
-	void updateView() {};
-
-	/** Sets component layout*/
-	void resized() override;
+    /** Sets component layout*/
+    void resized() override;
 
 private:
-	std::unique_ptr<UtilityButton> utilButton;
+    std::unique_ptr<UtilityButton> utilButton;
 };
 
-
-
-class PythonProcessorEditor :
-	public GenericEditor,
-	public Button::Listener
+class PythonProcessorEditor : public GenericEditor,
+                              public Button::Listener
 {
 public:
+    /** Constructor */
+    PythonProcessorEditor (PythonProcessor* parentNode);
 
-	/** Constructor */
-	PythonProcessorEditor(PythonProcessor* parentNode);
+    /** Destructor */
+    ~PythonProcessorEditor() {}
 
-	/** Destructor */
-	~PythonProcessorEditor() { }
+    /** Called just prior to the start of acquisition, to allow custom commands. */
+    void startAcquisition() override;
 
-	/** Called just prior to the start of acquisition, to allow custom commands. */
-	void startAcquisition() override;
+    /** Called after the end of acquisition, to allow custom commands .*/
+    void stopAcquisition() override;
 
-	/** Called after the end of acquisition, to allow custom commands .*/
-	void stopAcquisition() override;
+    /** Respond to button clicks*/
+    void buttonClicked (Button* button) override;
 
-	/** Respond to button clicks*/
-	void buttonClicked(Button* button) override;
-
-	/** Sets the text & tooltip of the path label */
-	void setPathLabelText(String text, String tooltip);
+    /** Sets the text & tooltip of the path label */
+    void setPathLabelText (String text, String tooltip);
 
 private:
+    PythonProcessor* pythonProcessor;
 
-	PythonProcessor* pythonProcessor;
+    std::unique_ptr<TextEditor> scriptPathLabel;
+    std::unique_ptr<Button> scriptPathButton;
+    std::unique_ptr<UtilityButton> reloadButton;
 
-	std::unique_ptr<TextEditor> scriptPathLabel;
-	std::unique_ptr<Button> scriptPathButton;
-	std::unique_ptr<UtilityButton> reloadButton;
+    uint16 currentStream = 0;
 
-	uint16 currentStream = 0;
-
-
-	/** Generates an assertion if this class leaks */
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PythonProcessorEditor);
+    /** Generates an assertion if this class leaks */
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PythonProcessorEditor);
 };
 
 #endif // PythonProcessorEDITOR_H_DEFINED
