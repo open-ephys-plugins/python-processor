@@ -71,7 +71,7 @@ jobs:
     - name: deploy
       if: github.ref == 'refs/heads/main'
       env:
-        secrets.ARTIFACTORY_ACCESS_TOKEN: ${{ secrets.secrets.ARTIFACTORY_ACCESS_TOKEN }}
+        ARTIFACTORY_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_ACCESS_TOKEN }}
       run: |
-        curl -H "X-JFrog-Art-Api:$secrets.ARTIFACTORY_ACCESS_TOKEN" -T ${{ env.zipfile }} "https://openephys.jfrog.io/artifactory/PythonProcessor-plugin/windows/${{ env.zipfile }}"
+        curl -H "X-JFrog-Art-Api:$ARTIFACTORY_ACCESS_TOKEN" -T ${{ env.zipfile }} "https://openephys.jfrog.io/artifactory/PythonProcessor-plugin/windows/${{ env.zipfile }}"
       shell: bash

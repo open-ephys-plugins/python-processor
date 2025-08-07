@@ -43,7 +43,7 @@ extern "C" EXPORT void getLibInfo (Plugin::LibraryInfo* info)
 	The GUI refueses to load plugins with mismatched API versions */
     info->apiVersion = PLUGIN_API_VER;
     info->name = "Python Processor"; // <---- update
-    info->libVersion = "0.1.0"; // <---- update
+    info->libVersion = "1.0.0"; // <---- update
     info->numPlugins = NUM_PLUGINS;
 }
 
