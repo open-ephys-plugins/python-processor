@@ -104,3 +104,8 @@ void PythonProcessorEditor::setPathLabelText (String text, String tooltip)
     scriptPathLabel->setTooltip (tooltip);
     scriptPathLabel->setCaretPosition (0);
 }
+
+void PythonProcessorEditor::lookAndFeelChanged()
+{
+    scriptPathLabel->applyColourToAllText (findColour (ThemeColours::defaultText));
+}

@@ -73,6 +73,9 @@ public:
     /** Sets the text & tooltip of the path label */
     void setPathLabelText (String text, String tooltip);
 
+    /** Called when the look and feel changes */
+    void lookAndFeelChanged() override;
+
 private:
     PythonProcessor* pythonProcessor;
 
